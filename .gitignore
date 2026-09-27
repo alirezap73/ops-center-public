@@ -1,0 +1,18 @@
+node_modules/
+.next/
+.env
+.env.*
+!.env.example
+!.env.local.example
+.DS_Store
+npm-debug.log*
+
+# Local notes, exports and database snapshots must not enter the public repository.
+HANDOFF.txt
+supabase/seed-*.sql
+backups/
+exports/
+*.dump
+*.bak
+*.db
+*.sqlite*

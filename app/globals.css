@@ -1,0 +1,325 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.guide-page [id] {
+  scroll-margin-top: 9rem;
+}
+
+/* ===========================================================================
+   Design tokens
+   کنتراست همه‌ی مقادیر زیر روی هر سه سطح (bg/panel/panelAlt) حداقل ۴.۵:۱ است
+   (استاندارد WCAG AA برای متن معمولی) — در هر دو حالت روشن و تیره.
+   =========================================================================== */
+
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #0b0e14;
+  --panel: #12161f;
+  --panel-alt: #161b26;
+  --border: #1e2430;
+  --border-strong: #2a3140;
+  --text: #e6e8eb;
+  --muted: #7c8798;
+  --faint: #808b9a;
+
+  --slate: #8a94a6;
+  --amber: #f5a623;
+  --violet: #a78bfa;
+  --red: #f0455c;
+  --jade: #2dd4a7;
+  --blue: #4ca3ff;
+
+  --slate-soft: rgba(138, 148, 166, 0.14);
+  --amber-soft: rgba(245, 166, 35, 0.14);
+  --violet-soft: rgba(167, 124, 250, 0.14);
+  --red-soft: rgba(240, 69, 92, 0.14);
+  --jade-soft: rgba(45, 212, 167, 0.14);
+  --blue-soft: rgba(76, 163, 255, 0.14);
+
+  /* روی کارت‌های تبلیغ و آپدیت که پس‌زمینه‌ی روشن ثابت دارند */
+  --on-sticky: #1a1a1a;
+
+  --focus: #4ca3ff;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.28);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.25);
+  --hover-veil: rgba(255, 255, 255, 0.04);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f5f6f8;
+  --panel: #ffffff;
+  --panel-alt: #f0f2f5;
+  --border: #e2e5ea;
+  --border-strong: #cdd3dc;
+  --text: #151a23;
+  --muted: #5b6472;
+  --faint: #5f6878;
+
+  --slate: #5b6472;
+  --amber: #7a5200;
+  --violet: #6435c9;
+  --red: #b81d34;
+  --jade: #0b7a5c;
+  --blue: #1258a8;
+
+  --slate-soft: rgba(91, 100, 114, 0.1);
+  --amber-soft: rgba(122, 82, 0, 0.1);
+  --violet-soft: rgba(100, 53, 201, 0.1);
+  --red-soft: rgba(184, 29, 52, 0.1);
+  --jade-soft: rgba(11, 122, 92, 0.1);
+  --blue-soft: rgba(18, 88, 168, 0.1);
+
+  --on-sticky: #1a1a1a;
+
+  --focus: #1258a8;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 4px 12px rgba(16, 24, 40, 0.08);
+  --hover-veil: rgba(16, 24, 40, 0.04);
+}
+
+/* ===========================================================================
+   Base
+   =========================================================================== */
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Vazirmatn", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* جلوگیری از بزرگ‌شدن خودکار متن در چرخش افقی iOS */
+  -webkit-text-size-adjust: 100%;
+  /* هایلایت آبی پیش‌فرض تپ در iOS با بازخورد خود برنامه جایگزین می‌شود */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* هنگام تعویض تم، ترنزیشن‌ها باعث می‌شدند کل صفحه محو‌شونده رنگ عوض کند.
+   این ویژگی فقط برای یک فریم روی <html> می‌نشیند. */
+[data-theme-switching] *,
+[data-theme-switching] *::before,
+[data-theme-switching] *::after {
+  transition: none !important;
+}
+
+.mono {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-feature-settings: "tnum" 1;
+}
+
+/* اعداد در ستون‌ها هم‌عرض بمانند تا پرش نکنند */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+.landing-glow {
+  background:
+    radial-gradient(circle at 70% 20%, var(--jade-soft) 0, transparent 34%),
+    radial-gradient(circle at 15% 45%, var(--blue-soft) 0, transparent 28%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* ===========================================================================
+   Focus — پیش از این هیچ نشانه‌ای برای کاربر کیبورد وجود نداشت
+   =========================================================================== */
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* موس نباید حلقه‌ی focus بسازد */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ===========================================================================
+   Interaction helpers
+   =========================================================================== */
+
+.ops-tap {
+  transition: background-color 0.15s ease, color 0.15s ease,
+    border-color 0.15s ease, opacity 0.15s ease;
+}
+
+@media (hover: hover) {
+  .ops-tap:hover:not(:disabled) {
+    background-color: var(--hover-veil);
+  }
+}
+
+.ops-tap:disabled {
+  cursor: default;
+}
+
+/* ردیف‌های قابل کلیک (ماژول‌ها، محتوا) */
+.ops-row {
+  transition: background-color 0.15s ease;
+}
+
+@media (hover: hover) {
+  .ops-row:hover {
+    background-color: var(--hover-veil) !important;
+  }
+}
+
+/* کارت‌ها: کمی بلند شدن هنگام hover */
+.ops-card {
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+/* سطح بالاتر: بخش هر پروژه در ستون اصلی */
+.ops-panel {
+  box-shadow: var(--shadow-sm);
+}
+
+@media (hover: hover) {
+  .ops-card:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow);
+    transform: translateY(-1px);
+  }
+}
+
+/* انتخاب متن: پیش از این رنگ پیش‌فرض مرورگر بود و در تم تیره پرت به‌نظر می‌رسید */
+::selection {
+  background: var(--jade-soft);
+  color: var(--text);
+}
+
+/* دکمه‌های اصلی سبز */
+.ops-primary {
+  background: var(--jade);
+  color: var(--bg);
+  transition: filter 0.15s ease;
+}
+
+:root[data-theme="light"] .ops-primary {
+  color: #ffffff;
+}
+
+.ops-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.ops-primary:disabled {
+  opacity: 0.6;
+}
+
+/* دکمه‌ی حذف */
+.ops-danger {
+  color: var(--red);
+  transition: background-color 0.15s ease;
+}
+
+@media (hover: hover) {
+  .ops-danger:hover {
+    background-color: var(--red-soft);
+  }
+}
+
+/* ورودی‌ها */
+.ops-input {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  transition: border-color 0.15s ease;
+}
+
+.ops-input::placeholder {
+  color: var(--faint);
+}
+
+@media (hover: hover) {
+  .ops-input:hover {
+    border-color: var(--border-strong);
+  }
+}
+
+.ops-input:focus-visible {
+  border-color: var(--focus);
+  outline-offset: 0;
+}
+
+/* ===========================================================================
+   Scrollbar — پیش از این فقط برای تم تیره تنظیم شده بود
+   =========================================================================== */
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 8px;
+  border: 2px solid var(--bg);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* Landing interactions: decorative motion stops after the entrance. */
+.landing-hero { isolation: isolate; }
+.landing-orb { position: absolute; width: 620px; height: 620px; border-radius: 50%; pointer-events: none; z-index: -1; filter: blur(70px); opacity: .4; animation: landing-arrive 1.2s ease-out both; }
+.landing-orb-one { background: var(--jade-soft); top: -230px; right: -200px; }
+.landing-orb-two { background: var(--violet-soft); bottom: -240px; left: -220px; }
+.landing-enter { animation: landing-arrive .8s ease-out both; }
+.landing-demo { overflow: hidden; border: 1px solid var(--border-strong); border-radius: 24px; background: var(--panel); box-shadow: 0 24px 80px -30px var(--jade-soft); }
+.landing-demo-progress { transition: width .45s ease, background-color .25s ease; }
+.landing-demo-task { transition: transform .18s ease, border-color .18s ease, background-color .18s ease; }
+.landing-feature { transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+@media (hover: hover) {
+  .landing-demo-task:hover { transform: translateX(-3px); }
+  .landing-feature:hover { transform: translateY(-5px); border-color: var(--jade) !important; box-shadow: 0 16px 35px -25px var(--jade); }
+}
+@keyframes landing-arrive { from { opacity: 0; transform: translateY(18px); } to { transform: translateY(0); } }
+
+/* ===========================================================================
+   Reduced motion
+   =========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* ===========================================================================
+   Touch — زیر ۱۶px، iOS موقع فوکوس روی فیلد کل صفحه را زوم می‌کند
+   =========================================================================== */
+
+@media (pointer: coarse) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
