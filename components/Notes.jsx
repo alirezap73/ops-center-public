@@ -73,7 +73,9 @@ export default function Notes({ initialNotes, loadError }) {
     if (error) {
       setNotes(snapshot);
       flash("خطا در ذخیره تغییرات: " + error.message);
+      return false;
     }
+    return true;
   };
 
   const deleteNote = async (id) => {
@@ -160,17 +162,19 @@ export default function Notes({ initialNotes, loadError }) {
               dir="ltr"
               className="w-full mono text-xs px-3 py-2 rounded-lg mb-2 outline-none ops-input"
             />
+            <label htmlFor="new-note-body" className="block text-xs font-medium mb-2" style={{ color: C.muted }}>متن یادداشت</label>
             <textarea
+              id="new-note-body"
               value={draft.body}
               onChange={(e) => setDraft({ ...draft, body: e.target.value })}
-              placeholder="محتوا..."
-              rows={4}
+              placeholder="جزئیات، ایده‌ها و نکات یادداشت را اینجا بنویس…"
+              rows={6}
               className="w-full text-sm leading-relaxed px-3 py-2 rounded-lg mb-2 outline-none resize-y ops-input"
             />
             <input
               value={draft.tags}
               onChange={(e) => setDraft({ ...draft, tags: e.target.value })}
-              placeholder="برچسب‌ها با کاما: فروشگاه, هاست"
+              placeholder="برچسب‌ها با کاما: کاری، ایده"
               className="w-full text-xs px-3 py-2 rounded-lg mb-2 outline-none ops-input"
             />
             <div className="flex gap-2">
@@ -252,10 +256,10 @@ export default function Notes({ initialNotes, loadError }) {
           <EmptyState icon={Search} dashed>یادداشتی با این فیلتر پیدا نشد.</EmptyState>
         )}
 
-        {/* چیدمان ستونی (masonry): کارت کوتاه زیر خودش فضای خالی جا نمی‌گذارد */}
-        <div className="columns-1 sm:columns-2 gap-3">
+        {/* A stable reading order and enough room for writing long notes. */}
+        <div className="flex flex-col gap-3">
           {visible.map((n) => (
-            <div key={n.id} className="break-inside-avoid mb-3">
+            <div key={n.id}>
             <NoteCard
               note={n}
               onPatch={patchNote}

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { safeHref, hostOf } from "@/lib/url";
 import NoteCard from "@/components/NoteCard";
+import NoteContentEditor from "@/components/ContentEditor";
 import ConfirmDelete from "@/components/ConfirmDelete";
 import EmptyState from "@/components/EmptyState";
 import SitTimer from "@/components/SitTimer";
@@ -559,16 +560,13 @@ function ProjectLinks({ links, canEdit, editing, onToggleEdit, onAdd, onPatch, o
 }
 
 /**
- * کارت رقیب — به‌صورت پیش‌فرض یک ردیف فشرده است (اسم، دامنه، بازدید، برچسب)
- * و با کلیک باز می‌شود. قبلاً هر چهار فیلد همیشه باز بود و مرور ۳۱ رقیب
- * یعنی چند صفحه اسکرول، حتی وقتی بیشتر فیلدها خالی بودند.
+ * کارت رقیب با خلاصهٔ تحلیل و دکمهٔ مشخص برای بازکردن جزئیات.
+ * ویرایشگرها هنگام جمع‌شدن کارت mounted می‌مانند تا پیش‌نویس حفظ شود.
  */
-function CompetitorCard({ item, onPatch, onDelete }) {
+export function CompetitorCard({ item, onPatch, onDelete }) {
   const [name, setName] = useState(item.name);
   const [url, setUrl] = useState(item.url);
   const [visits, setVisits] = useState(item.monthly_visits);
-  const [note, setNote] = useState(item.note);
-  const [advantage, setAdvantage] = useState(item.advantage);
   const [editUrl, setEditUrl] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -696,27 +694,25 @@ function CompetitorCard({ item, onPatch, onDelete }) {
             />
           </div>
 
-          <FieldLabel>نکته / مشکل</FieldLabel>
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            onBlur={() => save("note", note, item.note)}
-            rows={2}
-            placeholder="نکات، مشکلات، محدودیت‌ها..."
-            className="w-full text-sm leading-relaxed px-2 py-1.5 rounded-md outline-none resize-y ops-input mb-3"
-          />
-
-          <FieldLabel>نقطه‌قوت</FieldLabel>
-          <textarea
-            value={advantage}
-            onChange={(e) => setAdvantage(e.target.value)}
-            onBlur={() => save("advantage", advantage, item.advantage)}
-            rows={2}
-            placeholder="چه چیزی این رقیب رو خوب کرده..."
-            className="w-full text-sm leading-relaxed px-2 py-1.5 rounded-md outline-none resize-y ops-input"
-          />
         </div>
       )}
+      <div className="px-3 pb-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          {!open && <p className="text-xs truncate min-w-0 flex-1" style={{ color: C.muted }}>
+            {hasDetail ? (item.note?.trim() || item.advantage?.trim()) : "تحلیل، نکات و نقاط قوت این رقیب را ثبت کنید."}
+          </p>}
+          <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open}
+            className="ops-tap text-xs rounded-md px-2 py-2 flex items-center gap-1" style={{ color: tone("blue") }}>
+            <NotebookPen size={14} />{open ? "بستن جزئیات" : hasDetail ? "مشاهده و ویرایش تحلیل" : "افزودن تحلیل"}
+          </button>
+        </div>
+        <div className={open ? "" : "hidden"}>
+          <NoteContentEditor value={item.note} label="نکته‌ها و مشکلات" placeholder="مشاهدات، مشکلات و محدودیت‌های این رقیب…"
+            onSave={(note) => onPatch(item.id, { note })} />
+          <NoteContentEditor value={item.advantage} label="نقاط قوت" placeholder="چه ویژگی‌هایی این رقیب را متمایز می‌کند؟"
+            onSave={(advantage) => onPatch(item.id, { advantage })} />
+        </div>
+      </div>
     </div>
   );
 }
@@ -1360,7 +1356,9 @@ export default function OpsCenter({
     if (error) {
       setNotes(snapshot);
       flash("خطا در ذخیره یادداشت: " + error.message);
+      return false;
     }
+    return true;
   };
 
   const deleteNote = async (id) => {
@@ -1395,7 +1393,9 @@ export default function OpsCenter({
     if (error) {
       setCompetitorItems(snapshot);
       flash("خطا در ذخیره اطلاعات رقیب: " + error.message);
+      return false;
     }
+    return true;
   };
 
   const deleteCompetitor = async (id) => {
@@ -2513,9 +2513,9 @@ export default function OpsCenter({
                       }
                       return (
                         <>
-                          <div className="columns-1 lg:columns-2 gap-3">
+                          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 items-start">
                             {shown.map((n) => (
-                              <div key={n.id} className="break-inside-avoid mb-3">
+                              <div key={n.id} className="min-w-0">
                                 <NoteCard
                                   note={n}
                                   onPatch={patchNote}

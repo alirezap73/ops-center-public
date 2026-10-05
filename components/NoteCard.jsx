@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import {
-  Pin, PinOff, Copy, Check, ExternalLink, Tag, Link2, AlignLeft, ChevronDown, ChevronUp,
+  Pin, PinOff, Copy, Check, ExternalLink, Tag, Link2,
 } from "lucide-react";
 import ConfirmDelete from "@/components/ConfirmDelete";
+import ContentEditor from "@/components/ContentEditor";
 import { autoGrow } from "@/lib/autoGrow";
 import { C, tone, toneSoft } from "@/lib/theme";
 import { safeHref, hostOf } from "@/lib/url";
@@ -65,21 +66,12 @@ export function CopyButton({ text }) {
 export default function NoteCard({ note, onPatch, onDelete, slot = null }) {
   const [title, setTitle] = useState(note.title);
   const [url, setUrl] = useState(note.url);
-  const [body, setBody] = useState(note.body);
   const [tags, setTags] = useState(note.tags);
   const [editUrl, setEditUrl] = useState(false);
   // بخش‌های خالی رندر نمی‌شوند تا یادداشتِ «فقط عنوان و لینک» جای زیادی نگیرد.
   // openedX یعنی همین حالا با دکمه باز شد → فقط در آن حالت autoFocus بدهیم.
-  const [openedBody, setOpenedBody] = useState(false);
   const [openedTags, setOpenedTags] = useState(false);
-  const [editingBody, setEditingBody] = useState(false);
-  const [expandedBody, setExpandedBody] = useState(false);
-  const showBody = openedBody || Boolean(note.body?.trim());
   const showTags = openedTags || Boolean(note.tags?.trim());
-  // تقریبِ تعداد خط برای تصمیم به نمایش دکمه‌ی «نمایش کامل»
-  const bodyLines = (note.body || "")
-    .split("\n")
-    .reduce((n, line) => n + Math.max(1, Math.ceil(line.length / 42)), 0);
 
   const href = safeHref(note.url);
   const p = PRIORITY[note.priority] || PRIORITY.medium;
@@ -136,19 +128,11 @@ export default function NoteCard({ note, onPatch, onDelete, slot = null }) {
           {note.pinned ? <Pin size={13} /> : <PinOff size={13} />}
           <span className="sr-only">{note.pinned ? "برداشتن سنجاق" : "سنجاق"}</span>
         </button>
-        <CopyButton text={note.body} />
         {!href && !url.trim() && (
           <AddFieldButton
             icon={<Link2 size={13} />}
             title="افزودن لینک"
             onClick={() => setEditUrl(true)}
-          />
-        )}
-        {!showBody && (
-          <AddFieldButton
-            icon={<AlignLeft size={13} />}
-            title="افزودن محتوا"
-            onClick={() => setOpenedBody(true)}
           />
         )}
         {!showTags && (
@@ -199,44 +183,9 @@ export default function NoteCard({ note, onPatch, onDelete, slot = null }) {
         </div>
       ) : null}
 
-      {/* متن تا سه خط بریده می‌شود و فقط موقع ویرایش کامل باز می‌شود —
-          وگرنه یک یادداشت بلند کل ستون را می‌گرفت */}
-      {showBody && (editingBody ? (
-        <textarea
-          autoFocus
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          onBlur={() => {
-            save("body", body, note.body);
-            setEditingBody(false);
-          }}
-          rows={Math.min(14, Math.max(3, body.split("\n").length))}
-          placeholder="محتوا، یوزرنیم، اسنیپت، یادداشت فنی..."
-          className="w-full text-sm leading-relaxed px-2 py-1.5 rounded-md outline-none resize-y ops-input mb-2 last:mb-0"
-        />
-      ) : (
-        <button
-          onClick={() => setEditingBody(true)}
-          title="کلیک برای ویرایش"
-          className={`block w-full text-right text-sm leading-relaxed px-2 py-1.5 rounded-md whitespace-pre-wrap break-words ops-tap mb-2 last:mb-0 ${
-            expandedBody ? "" : "line-clamp-3"
-          }`}
-          style={{ color: note.body?.trim() ? C.text : C.faint }}
-        >
-          {note.body?.trim() || "محتوا، یوزرنیم، اسنیپت، یادداشت فنی..."}
-        </button>
-      ))}
-
-      {showBody && !editingBody && bodyLines > 3 && (
-        <button
-          onClick={() => setExpandedBody((v) => !v)}
-          className="flex items-center gap-1 text-xs px-1.5 py-0.5 -mr-1.5 rounded-md ops-tap mb-2"
-          style={{ color: tone("blue") }}
-        >
-          {expandedBody ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
-          {expandedBody ? "بستن" : "نمایش کامل"}
-        </button>
-      )}
+      <ContentEditor value={note.body} label="متن یادداشت"
+        placeholder="جزئیات، ایده‌ها و نکات این یادداشت را بنویس…"
+        onSave={(body) => onPatch(note.id, { body })} />
 
       {showTags && (
         <div className="flex items-center gap-1.5 min-w-0">
@@ -246,7 +195,7 @@ export default function NoteCard({ note, onPatch, onDelete, slot = null }) {
             value={tags}
             onChange={(e) => setTags(e.target.value)}
             onBlur={() => save("tags", tags, note.tags)}
-            placeholder="برچسب‌ها با کاما: فروشگاه, هاست"
+            placeholder="برچسب‌ها با کاما: کاری، ایده"
             className="flex-1 min-w-0 text-xs bg-transparent outline-none"
             style={{ color: C.muted }}
           />
