@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import LandingDemo from "@/components/LandingDemo";
 import {
   ArrowLeft, BarChart3, CalendarDays, Check, CheckSquare2, FileText,
@@ -74,48 +75,74 @@ export default function LandingPage() {
 
       <section className="relative overflow-hidden landing-hero">
         <div className="landing-orb landing-orb-one" aria-hidden="true" /><div className="landing-orb landing-orb-two" aria-hidden="true" />
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16 grid lg:grid-cols-[0.9fr_1.1fr] gap-9 lg:gap-12 items-center">
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10 grid lg:grid-cols-[1fr_1fr] gap-7 lg:gap-10 items-center">
           <div>
-            <div className="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-full mb-5" style={{ color: tone("jade"), background: toneSoft("jade"), border: `1px solid ${C.border}` }}>
-              <Sparkles size={14} /> یک جای جمع‌وجور برای کارهای بزرگ
+            <div className="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-full mb-4" style={{ color: tone("jade"), background: toneSoft("jade"), border: `1px solid ${C.border}` }}>
+              <Sparkles size={14} /> فضای شخصی مدیریت پروژه‌ها
             </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight">
-              فکرت آزاد.<span className="block mt-2" style={{ color: tone("jade") }}>کارهات روبه‌راه.</span>
+            <h1 className="text-[28px] sm:text-[42px] xl:text-[48px] font-bold leading-[1.4]">
+              پروژه‌هات را جلو ببر.<span className="block" style={{ color: tone("jade") }}>قدم بعدی را بدان.</span>
             </h1>
-            <p className="text-base sm:text-lg leading-8 mt-6 max-w-xl" style={{ color: C.muted }}>
-              داداش، فضای شخصی تو برای جلو بردن پروژه‌هاست. از اولین ایده تا آخرین تیک؛ پروژه، محتوا، یادداشت و کارهای روزانه، همه کنار هم.
+            <p className="text-sm sm:text-base leading-7 mt-4 max-w-xl" style={{ color: C.muted }}>
+              در داداش، کارهای امروز را کنار پیشرفت پروژه‌ها ببین. یادداشت و برنامهٔ محتوای هر پروژه هم در فضای خودش باقی می‌ماند.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 mt-8">
-              <Link href={primaryHref} className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold ops-primary">{primaryLabel}<ArrowLeft size={18} /></Link>
-              <Link href="/guide" className="inline-flex items-center justify-center px-5 py-3 rounded-xl font-medium ops-tap" style={{ border: `1px solid ${C.borderStrong}`, color: C.text }}>راهنمای قدم‌به‌قدم</Link>
+            <div className="flex flex-wrap gap-3 mt-5">
+              <Link href={primaryHref} className="inline-flex items-center justify-center gap-2 px-4 py-3 text-sm rounded-xl font-semibold ops-primary">شروع اولین پروژه<ArrowLeft size={18} /></Link>
+              <a href="#try-it" className="inline-flex items-center justify-center px-4 py-3 text-sm rounded-xl font-medium ops-tap" style={{ border: `1px solid ${C.borderStrong}`, color: C.text }}>امتحان پنل</a>
             </div>
-            <div className="flex flex-wrap gap-x-5 gap-y-2 mt-7 text-xs" style={{ color: C.muted }}>
-              {["ورود امن با ایمیل", "حساب شخصی و جدا", "مناسب موبایل و دسکتاپ"].map((item) => <span key={item} className="inline-flex items-center gap-1.5"><Check size={14} style={{ color: tone("jade") }} /> {item}</span>)}
+            <div className="flex flex-wrap gap-x-4 gap-y-2 mt-4 text-xs" style={{ color: C.muted }}>
+              {["ورود با ایمیل", "داده‌های جدا برای هر حساب", "روی موبایل و دسکتاپ"].map((item) => <span key={item} className="inline-flex items-center gap-1.5"><Check size={14} style={{ color: tone("jade") }} /> {item}</span>)}
             </div>
           </div>
-          <div className="min-w-0 landing-enter"><LandingDemo /></div>
+          <div className="relative min-w-0 landing-art-shell">
+            <div className="relative aspect-[16/9] sm:aspect-[3/2] overflow-hidden rounded-[24px]" style={{background:"#0b0e14",border:`1px solid ${C.borderStrong}`}}>
+              <Image src="/images/hero-planning-v1.png" alt="تصویر هنری برنامه‌ریزی با کارت‌های کار، تیک انجام و تایمر" fill priority sizes="(max-width: 1023px) 100vw, 560px" className="object-cover" />
+              <div className="absolute inset-x-0 bottom-0 p-4 flex items-center justify-between gap-3" style={{background:"linear-gradient(transparent,rgba(11,14,20,.9))",color:"#fff"}}>
+                <span className="text-sm font-medium">برای ایده‌هایی که می‌خواهی انجامشان بدهی</span><Layers size={20} className="shrink-0"/>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section id="features" className="py-12 sm:py-16 scroll-mt-16" style={{ borderTop: `1px solid ${C.border}` }}>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 rounded-2xl p-4" style={{background:C.panel,border:`1px solid ${C.border}`}}>
+          {[[Layers,"پروژه و چک‌لیست"],[FileText,"یادداشت‌های جدا"],[CalendarDays,"برنامه محتوا"],[Armchair,"تایمر استراحت"]].map(([Icon,text])=><span key={text} className="flex items-center gap-2 text-xs sm:text-sm"><Icon size={17} style={{color:tone("jade")}}/>{text}</span>)}
+        </div>
+      </div>
+
+      <section id="features" className="py-8 sm:py-10 scroll-mt-16" style={{ borderTop: `1px solid ${C.border}` }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="max-w-2xl mb-8 sm:mb-10">
+          <div className="max-w-2xl mb-6">
             <p className="text-xs font-semibold mb-3" style={{ color: tone("jade") }}>همه‌چیز در یک فضای منظم</p>
-            <h2 className="text-2xl sm:text-4xl font-bold leading-tight">از ایده تا اجرا، بدون گم‌کردن جزئیات</h2>
-            <p className="text-sm sm:text-base leading-7 mt-4" style={{ color: C.muted }}>هر چیزی که برای مدیریت روزمره‌ی پروژه‌ها لازم داری، کنار هم و با یک زبان بصری ساده قرار گرفته است.</p>
+            <h2 className="text-2xl sm:text-3xl font-bold leading-tight">هر پروژه، با جزئیات خودش</h2>
+            <p className="text-sm leading-7 mt-3" style={{ color: C.muted }}>کارهای روزانه را پیدا کن و برای بررسی جزئیات، وارد فضای همان پروژه شو.</p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {FEATURES.map(([Icon, color, title, text], index) => (
               <article key={title} className="relative overflow-hidden rounded-2xl p-5 sm:p-6 landing-feature" style={{ background: C.panel, border: `1px solid ${C.border}` }}>
                 <span className="absolute top-0 right-5 w-14 h-0.5 rounded-b-full" style={{ background: tone(color) }} aria-hidden="true" />
                 <span className="mono absolute top-5 left-5 text-xs" style={{ color: C.faint }} aria-hidden="true">0{index + 1}</span>
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-5" style={{ color: tone(color), background: toneSoft(color) }}><Icon size={20} /></div>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ color: tone(color), background: toneSoft(color) }}><Icon size={20} /></div>
                 <h3 className="text-base font-bold mb-2">{title}</h3>
                 <p className="text-sm leading-7" style={{ color: C.muted }}>{text}</p>
-                <Link href={`/guide#${FEATURE_ANCHORS[index]}`} className="inline-flex items-center gap-2 text-xs mt-5" style={{ color: tone(color) }}>بیشتر ببین <ArrowLeft size={14} /></Link>
+                <Link href={`/guide#${FEATURE_ANCHORS[index]}`} className="inline-flex items-center gap-2 text-xs mt-3" style={{ color: tone(color) }}>راهنمای این بخش <ArrowLeft size={14} /></Link>
               </article>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-10 sm:pb-12">
+        <div className="grid lg:grid-cols-[.8fr_1.2fr] gap-6 lg:gap-10 items-center rounded-3xl p-4 sm:p-6" style={{background:C.panelAlt,border:`1px solid ${C.border}`}}>
+          <div className="lg:px-3">
+            <span className="text-xs font-medium" style={{color:tone("jade")}}>قبل از ساخت حساب</span>
+            <h2 className="text-2xl sm:text-3xl leading-[1.5] font-bold mt-2">با پنل کار کن.<br/>همین‌جا امتحانش کن.</h2>
+            <p className="text-sm leading-7 mt-3" style={{color:C.muted}}>روی کارها تیک بزن و پیشرفت را ببین. بین نمای پروژه، کارهای امروز و محتوا جابه‌جا شو.</p>
+            <p className="text-xs leading-6 mt-3" style={{color:C.faint}}>این نمونه دادهٔ نمایشی دارد و در حساب ذخیره نمی‌شود.</p>
+            <Link href={primaryHref} className="inline-flex items-center gap-2 text-sm font-medium mt-4" style={{color:tone("jade")}}>فضای خودت را بساز <ArrowLeft size={16}/></Link>
+          </div>
+          <LandingDemo />
         </div>
       </section>
 
@@ -209,7 +236,7 @@ export default function LandingPage() {
           </div>
           <div>
             <h2 className="font-bold mb-4 flex items-center gap-2"><Server size={17} style={{ color: tone("violet") }} />راه‌اندازی نسخه شخصی</h2>
-            <p className="leading-7 mb-4" style={{ color: C.muted }}>می‌خواهی داداش را روی هاست خودت اجرا کنی؟ مراحل نصب را بخوان؛ دریافت سورس فعلاً به دسترسی مخزن GitHub نیاز دارد.</p>
+            <p className="leading-7 mb-4" style={{ color: C.muted }}>سورس داداش در گیت‌هاب عمومی است. راهنمای نصب را بخوان و نسخهٔ شخصی را روی هاست خودت راه‌اندازی کن.</p>
             <div className="flex flex-wrap gap-2">
               <a href="https://github.com/alirezap73/ops-center-public" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg ops-tap" style={{ border: `1px solid ${C.borderStrong}` }}><Github size={16} />مخزن GitHub</a>
               <Link href="/self-host" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg ops-tap" style={{ border: `1px solid ${C.borderStrong}` }}>آموزش نصب <ArrowLeft size={15} /></Link>
