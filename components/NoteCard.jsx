@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import {
-  Pin, PinOff, Copy, Check, ExternalLink, Tag, Link2,
+  Pin, PinOff, Copy, Check, ExternalLink, Tag, Link2, ChevronDown,
 } from "lucide-react";
 import ConfirmDelete from "@/components/ConfirmDelete";
 import ContentEditor from "@/components/ContentEditor";
@@ -11,11 +11,11 @@ import { C, tone, toneSoft } from "@/lib/theme";
 import { safeHref, hostOf } from "@/lib/url";
 import { PRIORITY, PRIORITY_ORDER } from "@/lib/priority";
 
-export const splitTags = (s) =>
+export const splitTags = (s) => [...new Set(
   (s || "")
-    .split(",")
+    .split(/[,،]/)
     .map((t) => t.trim())
-    .filter(Boolean);
+    .filter(Boolean))];
 
 /**
  * «باز کردن یک بخشِ خالی» — فقط آیکون، داخل نوار بالای کارت.
@@ -26,11 +26,11 @@ function AddFieldButton({ icon, title, onClick }) {
     <button
       onClick={onClick}
       title={title}
-      className="shrink-0 p-1.5 rounded-lg ops-tap"
-      style={{ color: C.faint }}
+      className="shrink-0 px-2 py-1.5 rounded-lg ops-tap flex items-center gap-1 text-xs"
+      style={{ color: C.muted }}
     >
       {icon}
-      <span className="sr-only">{title}</span>
+      <span>{title}</span>
     </button>
   );
 }
@@ -71,7 +71,9 @@ export default function NoteCard({ note, onPatch, onDelete, slot = null }) {
   // بخش‌های خالی رندر نمی‌شوند تا یادداشتِ «فقط عنوان و لینک» جای زیادی نگیرد.
   // openedX یعنی همین حالا با دکمه باز شد → فقط در آن حالت autoFocus بدهیم.
   const [openedTags, setOpenedTags] = useState(false);
-  const showTags = openedTags || Boolean(note.tags?.trim());
+  const showTags = openedTags;
+  const updated = note.updated_at && !Number.isNaN(Date.parse(note.updated_at))
+    ? new Intl.DateTimeFormat("fa-IR", { month: "short", day: "numeric" }).format(new Date(note.updated_at)) : null;
 
   const href = safeHref(note.url);
   const p = PRIORITY[note.priority] || PRIORITY.medium;
@@ -81,19 +83,14 @@ export default function NoteCard({ note, onPatch, onDelete, slot = null }) {
 
   return (
     <article
-      className="rounded-xl p-4 ops-card"
+      className="note-card rounded-xl p-4 sm:p-5 ops-card min-w-0"
       style={{
-        background: toneSoft(p.tone),
+        background: C.panel,
         border: `1px solid ${C.border}`,
         borderRight: `3px solid ${tone(p.tone)}`,
       }}
     >
-      <div className="flex items-start gap-2 mb-2">
-        <select aria-label="اهمیت یادداشت" value={note.priority || "medium"}
-          onChange={(e) => onPatch(note.id, { priority: e.target.value })}
-          className="ops-input text-xs font-medium rounded-md py-1 px-1 shrink-0 max-w-[90px]" style={{color:tone(p.tone)}}>
-          {PRIORITY_ORDER.map((key) => <option key={key} value={key}>{PRIORITY[key].label}</option>)}
-        </select>
+      <div className="flex items-start gap-2 mb-3">
         <textarea
           ref={autoGrow}
           rows={1}
@@ -108,35 +105,51 @@ export default function NoteCard({ note, onPatch, onDelete, slot = null }) {
             }
           }}
           placeholder="عنوان یادداشت"
-          className="flex-1 min-w-0 text-sm font-semibold leading-snug bg-transparent outline-none resize-none overflow-hidden"
+          aria-label="عنوان یادداشت"
+          className="flex-1 min-w-0 text-base font-semibold leading-7 bg-transparent outline-none resize-none overflow-hidden rounded-md"
           style={{ color: C.text }}
         />
         <button
           onClick={() => onPatch(note.id, { pinned: !note.pinned })}
           title={note.pinned ? "برداشتن سنجاق" : "سنجاق به بالا"}
+          aria-pressed={Boolean(note.pinned)}
           className="shrink-0 p-1.5 rounded-lg ops-tap"
           style={{ color: note.pinned ? tone("amber") : C.faint }}
         >
           {note.pinned ? <Pin size={13} /> : <PinOff size={13} />}
           <span className="sr-only">{note.pinned ? "برداشتن سنجاق" : "سنجاق"}</span>
         </button>
-        {!href && !url.trim() && (
+        <ConfirmDelete onConfirm={() => onDelete(note.id)} />
+      </div>
+      <div className="flex items-center gap-2 flex-wrap text-xs mb-2" style={{color:C.muted}}>
+        <select aria-label="اهمیت یادداشت" value={note.priority || "medium"}
+          onChange={(e) => onPatch(note.id, { priority: e.target.value })}
+          className="text-xs font-medium rounded-lg py-1.5 px-2 max-w-[110px]" style={{color:tone(p.tone),background:toneSoft(p.tone)}}>
+          {PRIORITY_ORDER.map((key) => <option key={key} value={key}>{PRIORITY[key].label}</option>)}
+        </select>
+        {note.pinned && <span className="flex items-center gap-1" style={{color:tone("amber")}}><Pin size={11}/>سنجاق‌شده</span>}
+        {updated && <span className="mr-auto">ویرایش {updated}</span>}
+      </div>
+
+      <ContentEditor value={note.body} label="متن یادداشت" appearance="paper"
+        placeholder="جزئیات، ایده‌ها و نکات این یادداشت را بنویس…"
+        onSave={(body) => onPatch(note.id, { body })} />
+
+      <div className="flex items-center gap-1 flex-wrap pt-3 mt-3" style={{borderTop:`1px solid ${C.border}`}}>
+        {!editUrl && !href && !url.trim() && (
           <AddFieldButton
             icon={<Link2 size={13} />}
             title="افزودن لینک"
             onClick={() => setEditUrl(true)}
           />
         )}
-        {!showTags && (
+        {!showTags && !note.tags?.trim() && (
           <AddFieldButton
             icon={<Tag size={13} />}
             title="افزودن برچسب"
             onClick={() => setOpenedTags(true)}
           />
         )}
-        <ConfirmDelete onConfirm={() => onDelete(note.id)} />
-      </div>
-
       {editUrl || (!href && url.trim()) ? (
         <input
           autoFocus={editUrl}
@@ -148,6 +161,7 @@ export default function NoteCard({ note, onPatch, onDelete, slot = null }) {
           }}
           onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
           placeholder="لینک (اختیاری) — example.com"
+          aria-label="لینک یادداشت"
           dir="ltr"
           className="w-full mono text-xs px-2 py-1.5 rounded-md outline-none ops-input mb-2 last:mb-0"
         />
@@ -175,10 +189,6 @@ export default function NoteCard({ note, onPatch, onDelete, slot = null }) {
         </div>
       ) : null}
 
-      <ContentEditor value={note.body} label="متن یادداشت"
-        placeholder="جزئیات، ایده‌ها و نکات این یادداشت را بنویس…"
-        onSave={(body) => onPatch(note.id, { body })} />
-
       {showTags && (
         <div className="flex items-center gap-1.5 min-w-0">
           <Tag size={11} className="shrink-0" style={{ color: C.faint }} />
@@ -188,6 +198,7 @@ export default function NoteCard({ note, onPatch, onDelete, slot = null }) {
             onChange={(e) => setTags(e.target.value)}
             onBlur={() => save("tags", tags, note.tags)}
             placeholder="برچسب‌ها با کاما: کاری، ایده"
+            aria-label="برچسب‌های یادداشت"
             className="flex-1 min-w-0 text-xs bg-transparent outline-none"
             style={{ color: C.muted }}
           />
@@ -195,7 +206,7 @@ export default function NoteCard({ note, onPatch, onDelete, slot = null }) {
       )}
 
       {splitTags(note.tags).length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-2">
+        <div className="flex flex-wrap gap-1">
           {splitTags(note.tags).map((t) => (
             <span
               key={t}
@@ -205,8 +216,11 @@ export default function NoteCard({ note, onPatch, onDelete, slot = null }) {
               {t}
             </span>
           ))}
+          {!showTags && <button onClick={() => setOpenedTags(true)} className="ops-tap p-1.5 rounded-lg text-xs" style={{color:C.muted}}>ویرایش برچسب‌ها</button>}
         </div>
       )}
+      {showTags && <button onClick={() => setOpenedTags(false)} className="ops-tap p-1.5 rounded-lg text-xs flex items-center gap-1" style={{color:C.muted}}><ChevronDown size={12}/>بستن برچسب‌ها</button>}
+      </div>
 
       {slot && <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${C.border}` }}>{slot}</div>}
     </article>

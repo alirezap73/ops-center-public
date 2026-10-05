@@ -1,19 +1,24 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { NotebookPen, Plus, X, Search, ShieldAlert } from "lucide-react";
+import { NotebookPen, Plus, X, Search, ShieldAlert, Pin } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useTheme, tone, toneSoft } from "@/lib/theme";
 import NoteCard, { splitTags } from "@/components/NoteCard";
 import EmptyState from "@/components/EmptyState";
 import PageHeader from "@/components/PageHeader";
 import { useFlash } from "@/lib/useFlash";
+import SectionToolbar from "@/components/SectionToolbar";
+import { faNum } from "@/lib/format";
 
 export default function Notes({ initialNotes, loadError }) {
   const { theme, toggleTheme, mounted, C } = useTheme();
   const [notes, setNotes] = useState(() => (initialNotes || []).filter((note) => note.project_id == null));
   const [search, setSearch] = useState("");
   const [activeTag, setActiveTag] = useState(null);
+  const [filter, setFilter] = useState("all");
+  const [sort, setSort] = useState("recent");
+  const [adding, setAdding] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [draft, setDraft] = useState({ title: "", url: "", body: "", tags: "" });
   const [errorMsg, flash] = useFlash();
@@ -28,6 +33,7 @@ export default function Notes({ initialNotes, loadError }) {
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
     return notes
+      .filter((n) => filter !== "pinned" || n.pinned)
       .filter((n) => (activeTag ? splitTags(n.tags).includes(activeTag) : true))
       .filter((n) =>
         !q
@@ -38,14 +44,18 @@ export default function Notes({ initialNotes, loadError }) {
       .sort(
         (a, b) =>
           Number(b.pinned) - Number(a.pinned) ||
-          String(b.updated_at).localeCompare(String(a.updated_at))
+          (sort === "title" ? (a.title || "").localeCompare(b.title || "", "fa") :
+            String(b.updated_at || "").localeCompare(String(a.updated_at || "")))
       );
-  }, [notes, search, activeTag]);
+  }, [notes, search, activeTag, filter, sort]);
 
   const addNote = async () => {
+    if (adding) return;
     const title = draft.title.trim();
     const body = draft.body.trim();
     if (!title && !body) return flash("حداقل عنوان یا محتوا را بنویس.");
+    setAdding(true);
+    try {
     const { data, error } = await supabase
       .from("notes")
       .insert({
@@ -61,6 +71,9 @@ export default function Notes({ initialNotes, loadError }) {
     setNotes((prev) => [data, ...prev]);
     setDraft({ title: "", url: "", body: "", tags: "" });
     setShowAdd(false);
+    } catch {
+      flash("یادداشت ذخیره نشد؛ متن شما در فرم محفوظ است.");
+    } finally { setAdding(false); }
   };
 
   // تغییر خوش‌بینانه است، ولی اگر ذخیره نشد به حالت قبل برمی‌گردیم
@@ -90,7 +103,7 @@ export default function Notes({ initialNotes, loadError }) {
 
   return (
     <div className="workspace-page" dir="rtl" lang="fa" style={{ background: C.bg, color: C.text, minHeight: "100vh" }}>
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto px-4 py-8">
         <PageHeader theme={theme} toggleTheme={toggleTheme} mounted={mounted} />
 
         <div className="flex items-start justify-between gap-3 mb-1">
@@ -103,6 +116,9 @@ export default function Notes({ initialNotes, loadError }) {
           </div>
           <button
             onClick={() => setShowAdd((v) => !v)}
+            aria-expanded={showAdd}
+            aria-controls="new-note-form"
+            disabled={adding}
             className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg font-medium ops-primary shrink-0"
           >
             <Plus size={13} className="shrink-0" /> یادداشت جدید
@@ -111,6 +127,10 @@ export default function Notes({ initialNotes, loadError }) {
         <p className="text-sm mt-1 mb-4" style={{ color: C.muted }}>
           یادداشت‌های شخصی و روزانه، مستقل از پروژه‌ها. یادداشت‌های هر پروژه را داخل همان پروژه، در تب «یادداشت‌ها» ببین.
         </p>
+        <div className="flex items-center gap-4 text-xs mb-5" style={{color:C.muted}}>
+          <span>{faNum(notes.length)} یادداشت</span>
+          <span className="flex items-center gap-1"><Pin size={12}/>{faNum(notes.filter((n) => n.pinned).length)} سنجاق‌شده</span>
+        </div>
 
         {/* هشدار امنیتی: این متن عمداً همیشه دیده می‌شود */}
         <div
@@ -147,24 +167,30 @@ export default function Notes({ initialNotes, loadError }) {
         )}
 
         {showAdd && (
-          <div className="mb-5 p-3 rounded-xl" style={{ background: C.panelAlt, border: `1px solid ${C.border}` }}>
+          <section id="new-note-form" aria-label="ساخت یادداشت" className="mb-5 p-4 sm:p-5 rounded-xl" style={{ background: C.panel, border: `1px solid ${C.border}` }}>
+            <h2 className="text-sm font-semibold mb-4">یادداشت جدید</h2>
             <input
               autoFocus
               value={draft.title}
               onChange={(e) => setDraft({ ...draft, title: e.target.value })}
               placeholder="عنوان"
+              aria-label="عنوان یادداشت جدید"
+              disabled={adding}
               className="w-full text-sm px-3 py-2 rounded-lg mb-2 outline-none ops-input"
             />
             <input
               value={draft.url}
               onChange={(e) => setDraft({ ...draft, url: e.target.value })}
               placeholder="لینک (اختیاری)"
+              aria-label="لینک یادداشت جدید"
+              disabled={adding}
               dir="ltr"
               className="w-full mono text-xs px-3 py-2 rounded-lg mb-2 outline-none ops-input"
             />
             <label htmlFor="new-note-body" className="block text-xs font-medium mb-2" style={{ color: C.muted }}>متن یادداشت</label>
             <textarea
               id="new-note-body"
+              disabled={adding}
               value={draft.body}
               onChange={(e) => setDraft({ ...draft, body: e.target.value })}
               placeholder="جزئیات، ایده‌ها و نکات یادداشت را اینجا بنویس…"
@@ -175,52 +201,38 @@ export default function Notes({ initialNotes, loadError }) {
               value={draft.tags}
               onChange={(e) => setDraft({ ...draft, tags: e.target.value })}
               placeholder="برچسب‌ها با کاما: کاری، ایده"
+              aria-label="برچسب‌های یادداشت جدید"
+              disabled={adding}
               className="w-full text-xs px-3 py-2 rounded-lg mb-2 outline-none ops-input"
             />
             <div className="flex gap-2">
-              <button onClick={addNote} className="flex-1 text-xs py-2 rounded-lg font-medium ops-primary">
-                افزودن
+              <button onClick={addNote} disabled={adding || (!draft.title.trim() && !draft.body.trim())} className="text-xs px-5 py-2.5 rounded-lg font-medium ops-primary">
+                {adding ? "در حال ذخیره…" : "ذخیره یادداشت"}
               </button>
               <button
                 onClick={() => setShowAdd(false)}
+                disabled={adding}
                 className="px-3 rounded-lg text-xs ops-tap"
                 style={{ color: C.muted }}
               >
                 انصراف
               </button>
             </div>
-          </div>
+          </section>
         )}
 
         {/* جستجو + برچسب‌ها */}
         {notes.length > 0 && (
           <div className="mb-5">
-            <div className="relative mb-2">
-              <Search
-                size={14}
-                className="absolute top-1/2 -translate-y-1/2 right-2.5 pointer-events-none"
-                style={{ color: C.faint }}
-              />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => e.key === "Escape" && setSearch("")}
-                placeholder="جستجو در عنوان، محتوا، لینک و برچسب..."
-                className={`w-full text-sm pr-8 py-2 rounded-lg outline-none ops-input ${
-                  search ? "pl-9" : "pl-3"
-                }`}
-              />
-              {search && (
-                <button
-                  onClick={() => setSearch("")}
-                  title="پاک کردن جستجو (Esc)"
-                  className="absolute top-1/2 -translate-y-1/2 left-2 p-1 rounded-md ops-tap"
-                  style={{ color: C.faint }}
-                >
-                  <X size={13} />
-                  <span className="sr-only">پاک کردن جستجو</span>
-                </button>
-              )}
+            <SectionToolbar value={search} onChange={setSearch} placeholder="جستجو در یادداشت‌ها، لینک و برچسب" count={visible.length}
+              filters={[{key:"all",label:"همه یادداشت‌ها"},{key:"pinned",label:"سنجاق‌شده‌ها"}]} selected={filter} onFilter={setFilter}/>
+            <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+              <span className="text-xs" style={{color:C.muted}}>سنجاق‌شده‌ها همیشه بالاتر هستند.</span>
+              <label className="flex items-center gap-2 text-xs" style={{color:C.muted}}>مرتب‌سازی
+                <select aria-label="مرتب‌سازی یادداشت‌ها" value={sort} onChange={(e) => setSort(e.target.value)} className="ops-input rounded-lg p-2">
+                  <option value="recent">آخرین ویرایش</option><option value="title">عنوان</option>
+                </select>
+              </label>
             </div>
             {allTags.length > 0 && (
               <div className="flex flex-wrap items-center gap-1.5">
@@ -230,6 +242,7 @@ export default function Notes({ initialNotes, loadError }) {
                     <button
                       key={t}
                       onClick={() => setActiveTag(on ? null : t)}
+                      aria-pressed={on}
                       className="flex items-center gap-1 text-xs px-2 py-1 rounded-full ops-tap"
                       style={{
                         color: on ? tone("violet") : C.faint,
@@ -244,6 +257,8 @@ export default function Notes({ initialNotes, loadError }) {
                 })}
               </div>
             )}
+            {(search || activeTag || filter !== "all") && <button className="ops-tap rounded-lg px-2 py-2 mt-2 text-xs" style={{color:tone("blue")}}
+              onClick={() => {setSearch("");setActiveTag(null);setFilter("all");}}>پاک کردن همه فیلترها</button>}
 
           </div>
         )}

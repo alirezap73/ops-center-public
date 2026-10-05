@@ -5,7 +5,7 @@ import { Pencil, Plus, ChevronDown, ChevronUp, Check, Copy } from "lucide-react"
 import { C, tone, toneSoft } from "@/lib/theme";
 
 /** Selectable reading view and an explicit, failure-safe writing mode. */
-export default function ContentEditor({ value = "", label = "متن یادداشت", placeholder = "متن را اینجا بنویس…", onSave }) {
+export default function ContentEditor({ value = "", label = "متن یادداشت", placeholder = "متن را اینجا بنویس…", onSave, appearance = "inset" }) {
   const id = useId();
   const preview = useRef(null);
   const [editing, setEditing] = useState(false);
@@ -66,8 +66,8 @@ export default function ContentEditor({ value = "", label = "متن یادداش
   };
 
   return (
-    <section className="mt-3 rounded-lg p-3 min-w-0" aria-label={label}
-      style={{ border: `1px solid ${C.border}`, background: C.panel }}>
+    <section className={`mt-3 rounded-lg min-w-0 ${appearance === "paper" ? "pt-3" : "p-3"}`} aria-label={label}
+      style={{ border: appearance === "paper" ? undefined : `1px solid ${C.border}`, borderTop: appearance === "paper" ? `1px solid ${C.border}` : undefined, background: appearance === "paper" ? "transparent" : C.panel }}>
       <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
         <label htmlFor={editing ? id : undefined} className="text-xs font-semibold" style={{ color: C.muted }}>{label}</label>
         {!editing && <div className="flex items-center gap-1">
