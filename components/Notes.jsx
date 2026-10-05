@@ -271,8 +271,8 @@ export default function Notes({ initialNotes, loadError }) {
           <EmptyState icon={Search} dashed>یادداشتی با این فیلتر پیدا نشد.</EmptyState>
         )}
 
-        {/* A stable reading order and enough room for writing long notes. */}
-        <div className="flex flex-col gap-3">
+        {/* Column flow keeps each card directly below its own column's previous card. */}
+        <div className="notes-masonry" aria-label="یادداشت‌های روزانه">
           {visible.map((n) => (
             <div key={n.id}>
             <NoteCard

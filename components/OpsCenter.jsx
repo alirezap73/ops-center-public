@@ -2619,7 +2619,7 @@ export default function OpsCenter({
                       }
                       return (
                         <>
-                          <div className="flex flex-col gap-3" aria-label="یادداشت‌های پروژه">
+                          <div className="notes-masonry" aria-label="یادداشت‌های پروژه">
                             {shown.map((n) => (
                               <div key={n.id} className="min-w-0">
                                 <NoteCard

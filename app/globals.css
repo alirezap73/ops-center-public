@@ -12,6 +12,11 @@
 }
 
 /* Shared workspace surfaces, separate from the public landing page. */
+.notes-masonry { column-count: 1; column-gap: 12px; }
+.notes-masonry > div { display: inline-block; width: 100%; margin-bottom: 12px; vertical-align: top; break-inside: avoid; }
+@media (min-width: 768px) {
+  .notes-masonry { column-count: 2; }
+}
 .workspace-page h1 { font-size: 1.5rem; letter-spacing: normal; line-height: 1.5; }
 .workspace-page aside h1 { font-size: 1rem; }
 .workspace-page .ops-card, .workspace-page .ops-panel { border-radius: 16px; }
