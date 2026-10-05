@@ -1,4 +1,7 @@
 "use client";
+import { useState } from "react";
+import SectionToolbar from "@/components/SectionToolbar";
+import EmptyState from "@/components/EmptyState";
 
 import { Sparkles, Wrench, Zap } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
@@ -21,11 +24,16 @@ export default function Roadmap() {
   const { theme, toggleTheme, mounted, C } = useTheme();
   const version = computeVersion(CHANGELOG);
   const versions = computeVersions(CHANGELOG);
+  const [search, setSearch] = useState("");
+  const [size, setSize] = useState("all");
+  const [limit, setLimit] = useState(16);
   // جدیدترین بالا، ولی شماره و نسخه‌ی هر ردیف همان چیزی می‌ماند که در ترتیب واقعی داشت
   const entries = CHANGELOG.map((entry, i) => ({ ...entry, no: i + 1, version: versions[i] })).reverse();
+  const matching = entries.filter((entry) => (size === "all" || entry.size === size) &&
+    [entry.title, entry.detail, entry.version, entry.date].some((text) => (text || "").toLowerCase().includes(search.trim().toLowerCase())));
 
   return (
-    <div dir="rtl" lang="fa" style={{ background: C.bg, color: C.text, minHeight: "100vh" }}>
+    <div className="workspace-page" dir="rtl" lang="fa" style={{ background: C.bg, color: C.text, minHeight: "100vh" }}>
       <div className="max-w-2xl mx-auto px-4 py-8">
         <PageHeader theme={theme} toggleTheme={toggleTheme} mounted={mounted} />
 
@@ -37,10 +45,17 @@ export default function Roadmap() {
           هر ویرایشی که روی این پلتفرم انجام بشه، اینجا ثبت می‌شه.
         </p>
 
+        <div className="rounded-xl p-4 mb-5 flex items-center justify-between gap-3" style={{background:toneSoft("jade"),border:`1px solid ${C.border}`}}>
+          <span className="text-sm">نسخه فعلی</span><span dir="ltr" className="mono text-xl font-bold" style={{color:tone("jade")}}>v{version}</span>
+        </div>
+        <SectionToolbar value={search} onChange={(value) => { setSearch(value); setLimit(16); }} placeholder="جستجوی نسخه یا تغییرات" count={matching.length}
+          filters={[{key:"all",label:"همه تغییرات"},...Object.entries(SIZE).map(([key,meta]) => ({key,label:meta.label}))]}
+          selected={size} onFilter={(value) => { setSize(value); setLimit(16); }} />
+        {!matching.length && <EmptyState icon={Wrench} dashed>تغییری با این جستجو پیدا نشد.</EmptyState>}
         <div className="relative">
           <div className="absolute top-0 bottom-0 right-[7px] w-px" style={{ background: C.border }} />
           <div className="flex flex-col gap-5">
-            {entries.map((entry) => {
+            {matching.slice(0,limit).map((entry) => {
               const meta = SIZE[entry.size] || SIZE.small;
               const Icon = meta.icon;
               const t = toneOf(entry.no - 1);
@@ -90,6 +105,8 @@ export default function Roadmap() {
             })}
           </div>
         </div>
+        {matching.length > limit && <button type="button" onClick={() => setLimit((n) => n + 16)}
+          className="ops-tap w-full rounded-xl p-3 mt-5 text-sm" style={{background:C.panelAlt,color:tone("blue")}}>نمایش تغییرات قدیمی‌تر · {faNum(matching.length - limit)} مورد دیگر</button>}
 
         <div className="mt-10 text-center">
           <div className="inline-block px-4 py-2 rounded-full mono text-sm mb-3" style={{ background: C.panelAlt, border: `1px solid ${C.border}`, color: tone("jade") }}>

@@ -24,7 +24,6 @@ import SitTimer from "@/components/SitTimer";
 import GuideHelp from "@/components/GuideHelp";
 import { PRIORITY, PRIORITY_ORDER } from "@/lib/priority";
 import { useFlash } from "@/lib/useFlash";
-import { autoGrow } from "@/lib/autoGrow";
 import { computeVersion } from "@/lib/changelog";
 import { withAlpha } from "@/lib/color";
 import { faNum } from "@/lib/format";
@@ -760,19 +759,8 @@ function ChecklistAdder({ onAdd }) {
 }
 
 function NotesBox({ moduleId, initialValue, onSave }) {
-  const [val, setVal] = useState(initialValue);
-  return (
-    <textarea
-      value={val}
-      onChange={(e) => setVal(e.target.value)}
-      onBlur={() => {
-        if (val !== initialValue) onSave(moduleId, val);
-      }}
-      rows={3}
-      placeholder="توضیحات، نکات آموزشی یا وضعیت فعلی این بخش را بنویس..."
-      className="w-full text-sm leading-relaxed px-3 py-2 rounded-lg outline-none resize-y ops-input mb-4"
-    />
-  );
+  return <NoteContentEditor value={initialValue} label="یادداشت و راهنمای ماژول"
+    onSave={(value) => onSave(moduleId, value)} />;
 }
 
 function PlatformBadge({ platform }) {
@@ -788,7 +776,6 @@ function PlatformBadge({ platform }) {
 
 function ContentEditor({ item, onSaveField }) {
   const [title, setTitle] = useState(item.title);
-  const [body, setBody] = useState(item.body);
   const [date, setDate] = useState(item.publish_date || "");
 
   return (
@@ -801,15 +788,8 @@ function ContentEditor({ item, onSaveField }) {
         className="w-full text-sm px-3 py-2 rounded-lg outline-none ops-input mb-4"
       />
 
-      <FieldLabel>متن / کپشن</FieldLabel>
-      <textarea
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        onBlur={() => body !== item.body && onSaveField(item.id, "body", body)}
-        rows={4}
-        placeholder="متن پست، کپشن یا خلاصه محتوا..."
-        className="w-full text-sm leading-relaxed px-3 py-2 rounded-lg outline-none resize-y ops-input mb-4"
-      />
+      <NoteContentEditor value={item.body} label="متن و کپشن محتوا" placeholder="متن پست، کپشن یا خلاصه محتوا…"
+        onSave={(value) => onSaveField(item.id, "body", value)} />
 
       <FieldLabel>تاریخ انتشار</FieldLabel>
       <input
@@ -829,12 +809,8 @@ function ContentEditor({ item, onSaveField }) {
 function UpdateCard({
   item, rank, isFirst, isLast, onSaveText, onSaveVersion, onSetColor, onMove, onReorder, onDelete,
 }) {
-  const [text, setText] = useState(item.text);
   const [version, setVersion] = useState(item.version || "");
   const idx = UPDATE_STATUS_ORDER.indexOf(item.status);
-  const textareaRef = useRef(null);
-
-  useEffect(() => autoGrow(textareaRef.current), [text]);
 
   return (
     <div
@@ -859,16 +835,8 @@ function UpdateCard({
         />
         <ConfirmDelete onConfirm={() => onDelete(item.id)} size={13} className="p-1" onSticky />
       </div>
-      <textarea
-        ref={textareaRef}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={() => text !== item.text && onSaveText(item.id, text)}
-        rows={1}
-        placeholder="متن آپدیت..."
-        className="w-full text-sm leading-relaxed bg-transparent outline-none resize-none mb-2 overflow-hidden placeholder:opacity-45"
-        style={{ color: C.onSticky }}
-      />
+      <div className="mb-3"><NoteContentEditor value={item.text} label="متن آپدیت"
+        onSave={(value) => onSaveText(item.id, value)} /></div>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           {UPDATE_COLORS.map((c) => (
@@ -934,11 +902,7 @@ function UpdateCard({
 }
 
 function AdCard({ item, onSaveText, onCyclePriority, onCyclePlatform, onSetColor, onMove, onDelete }) {
-  const [text, setText] = useState(item.text);
   const idx = UPDATE_STATUS_ORDER.indexOf(item.status);
-  const textareaRef = useRef(null);
-
-  useEffect(() => autoGrow(textareaRef.current), [text]);
 
   const p = PRIORITY[item.priority];
   const plat = AD_PLATFORM[item.platform] || AD_PLATFORM.other;
@@ -978,16 +942,8 @@ function AdCard({ item, onSaveText, onCyclePriority, onCyclePlatform, onSetColor
         </div>
         <ConfirmDelete onConfirm={() => onDelete(item.id)} size={13} className="p-1" onSticky />
       </div>
-      <textarea
-        ref={textareaRef}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={() => text !== item.text && onSaveText(item.id, text)}
-        rows={1}
-        placeholder="متن تبلیغ..."
-        className="w-full text-sm leading-relaxed bg-transparent outline-none resize-none mb-2 overflow-hidden placeholder:opacity-45"
-        style={{ color: C.onSticky }}
-      />
+      <div className="mb-3"><NoteContentEditor value={item.text} label="متن تبلیغ"
+        onSave={(value) => onSaveText(item.id, value)} /></div>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           {UPDATE_COLORS.map((c) => (
@@ -1180,9 +1136,15 @@ export default function OpsCenter({
   const saveNotes = async (mid, notes) => {
     let pid = null;
     projects.forEach((p) => p.modules.forEach((mm) => { if (mm.id === mid) pid = p.id; }));
+    const previous = projects.find((p) => p.id === pid)?.modules.find((mm) => mm.id === mid)?.notes;
     if (pid) updateModuleLocal(pid, mid, (mm) => ({ ...mm, notes }));
     const { error } = await supabase.from("modules").update({ notes }).eq("id", mid);
-    if (error) flash("خطا در ذخیره یادداشت: " + error.message);
+    if (error) {
+      if (pid) updateModuleLocal(pid, mid, (mm) => mm.notes === notes ? { ...mm, notes: previous } : mm);
+      flash("خطا در ذخیره یادداشت: " + error.message);
+      return false;
+    }
+    return true;
   };
 
   const toggleChecklist = async (pid, mid, cid, currentDone) => {
@@ -1225,9 +1187,15 @@ export default function OpsCenter({
   };
 
   const updateContentField = async (cid, field, value) => {
+    const previous = contentItems.find((ci) => ci.id === cid)?.[field];
     setContentItems((prev) => prev.map((ci) => (ci.id === cid ? { ...ci, [field]: value } : ci)));
     const { error } = await supabase.from("content_items").update({ [field]: value }).eq("id", cid);
-    if (error) flash("خطا در ذخیره تغییرات محتوا: " + error.message);
+    if (error) {
+      setContentItems((prev) => prev.map((ci) => ci.id === cid && ci[field] === value ? { ...ci, [field]: previous } : ci));
+      flash("خطا در ذخیره تغییرات محتوا: " + error.message);
+      return false;
+    }
+    return true;
   };
 
   const cycleContentStatus = async (cid, current) => {
@@ -1271,9 +1239,15 @@ export default function OpsCenter({
   };
 
   const updateUpdateField = async (uid, field, value) => {
+    const previous = updateItems.find((item) => item.id === uid)?.[field];
     setUpdateItems((prev) => prev.map((u) => (u.id === uid ? { ...u, [field]: value } : u)));
     const { error } = await supabase.from("update_items").update({ [field]: value }).eq("id", uid);
-    if (error) flash("خطا در ذخیره تغییرات: " + error.message);
+    if (error) {
+      setUpdateItems((prev) => prev.map((item) => item.id === uid && item[field] === value ? { ...item, [field]: previous } : item));
+      flash("خطا در ذخیره تغییرات: " + error.message);
+      return false;
+    }
+    return true;
   };
 
   /**
@@ -1346,9 +1320,15 @@ export default function OpsCenter({
   };
 
   const updateAdField = async (aid, field, value) => {
+    const previous = adItems.find((item) => item.id === aid)?.[field];
     setAdItems((prev) => prev.map((a) => (a.id === aid ? { ...a, [field]: value } : a)));
     const { error } = await supabase.from("ad_items").update({ [field]: value }).eq("id", aid);
-    if (error) flash("خطا در ذخیره تغییرات تبلیغ: " + error.message);
+    if (error) {
+      setAdItems((prev) => prev.map((item) => item.id === aid && item[field] === value ? { ...item, [field]: previous } : item));
+      flash("خطا در ذخیره تغییرات تبلیغ: " + error.message);
+      return false;
+    }
+    return true;
   };
 
   const cycleAdPriority = async (aid, current) => {
@@ -1643,7 +1623,7 @@ export default function OpsCenter({
     ? visibleProjects.filter((project) => matchingProjectIds.has(project.id)) : visibleProjects;
 
   return (
-    <div style={{ background: C.bg, color: C.text, minHeight: "100vh" }}>
+    <div className="workspace-page" style={{ background: C.bg, color: C.text, minHeight: "100vh" }}>
       <a href="#workspace-main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:right-2 focus:z-50 ops-primary rounded-lg px-4 py-2 text-sm">رفتن به محتوای پنل</a>
       <div className="flex flex-col lg:flex-row" style={{ minHeight: "100vh" }}>
         {/* Sidebar */}

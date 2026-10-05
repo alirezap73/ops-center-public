@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Shared workspace surfaces, separate from the public landing page. */
+.workspace-page h1 { font-size: 1.5rem; letter-spacing: -.025em; line-height: 1.5; }
+.workspace-page aside h1 { font-size: 1rem; }
+.workspace-page .ops-card, .workspace-page .ops-panel { border-radius: 16px; }
+.workspace-page .ops-card { box-shadow: 0 3px 14px -10px var(--muted); }
+.workspace-page .ops-input { border-radius: 10px; }
+.workspace-page .ops-input:focus-visible { box-shadow: 0 0 0 3px var(--blue-soft); }
+.workspace-page .section-toolbar { box-shadow: var(--shadow-sm); }
+@media (hover: hover) {
+  .workspace-page .ops-card:hover { transform: none; }
+}
+
 .guide-page [id] {
   scroll-margin-top: 9rem;
 }

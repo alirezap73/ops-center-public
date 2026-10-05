@@ -89,7 +89,7 @@ export default function Notes({ initialNotes, loadError }) {
   };
 
   return (
-    <div dir="rtl" lang="fa" style={{ background: C.bg, color: C.text, minHeight: "100vh" }}>
+    <div className="workspace-page" dir="rtl" lang="fa" style={{ background: C.bg, color: C.text, minHeight: "100vh" }}>
       <div className="max-w-3xl mx-auto px-4 py-8">
         <PageHeader theme={theme} toggleTheme={toggleTheme} mounted={mounted} />
 

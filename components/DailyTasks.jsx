@@ -11,6 +11,7 @@ import { PRIORITY, PRIORITY_ORDER } from "@/lib/priority";
 import ConfirmDelete from "@/components/ConfirmDelete";
 import EmptyState from "@/components/EmptyState";
 import PageHeader from "@/components/PageHeader";
+import SectionToolbar from "@/components/SectionToolbar";
 import { useFlash } from "@/lib/useFlash";
 
 /** کلید تاریخ محلی — toISOString() چند ساعت جابه‌جا می‌کند و «امروز» را خراب می‌کند */
@@ -90,6 +91,7 @@ function TaskRow({ task, C, today, isFirst, isLast, onPatch, onDelete, onMove, o
       <input
         type="checkbox"
         checked={task.done}
+        aria-label={`انجام ${task.text}`}
         onChange={() => onPatch(task.id, { done: !task.done })}
         className="mt-0.5 w-4 h-4 shrink-0"
         style={{ accentColor: "var(--jade)" }}
@@ -139,22 +141,11 @@ function TaskRow({ task, C, today, isFirst, isLast, onPatch, onDelete, onMove, o
               <span style={{ opacity: 0.7 }}>· توقف</span>
             </button>
           )}
-          <button
-            onClick={() =>
-              onPatch(task.id, {
-                priority:
-                  PRIORITY_ORDER[
-                    (PRIORITY_ORDER.indexOf(task.priority) + 1) % PRIORITY_ORDER.length
-                  ],
-              })
-            }
-            title="کلیک برای تغییر اولویت"
-            className="flex items-center gap-1 text-xs px-1.5 py-0.5 -mr-1.5 rounded-md ops-tap"
-            style={{ color: tone(p.tone) }}
-          >
-            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: tone(p.tone) }} />
-            {p.label}
-          </button>
+          <select aria-label={`اولویت ${task.text}`} value={task.priority || "medium"}
+            onChange={(e) => onPatch(task.id, { priority: e.target.value })}
+            className="ops-input text-xs rounded-md px-2 py-1" style={{ color: tone(p.tone) }}>
+            {PRIORITY_ORDER.map((key) => <option key={key} value={key}>{PRIORITY[key].label}</option>)}
+          </select>
 
           <label
             className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md cursor-pointer ops-tap"
@@ -167,7 +158,8 @@ function TaskRow({ task, C, today, isFirst, isLast, onPatch, onDelete, onMove, o
               type="date"
               value={task.task_date || ""}
               onChange={(e) => onPatch(task.id, { task_date: e.target.value || null })}
-              className="sr-only"
+              aria-label={`تاریخ ${task.text}`}
+              className="ops-input mono text-xs rounded-md px-2 py-1 min-w-0 max-w-[155px]"
             />
           </label>
 
@@ -317,6 +309,8 @@ export default function DailyTasks({ initialTasks, loadError }) {
   const { theme, toggleTheme, mounted, C } = useTheme();
   const [tasks, setTasks] = useState(initialTasks || []);
   const [newText, setNewText] = useState("");
+  const [search, setSearch] = useState("");
+  const [taskFilter, setTaskFilter] = useState("all");
   const [errorMsg, flash] = useFlash();
   const [showArchive, setShowArchive] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
@@ -358,6 +352,9 @@ export default function DailyTasks({ initialTasks, loadError }) {
   const todayTotal = groups.today.length;
   const todayPct = todayTotal ? Math.round((todayDone / todayTotal) * 100) : 0;
   const doneCount = tasks.filter((t) => t.done).length;
+  const matchesTask = (task) => (taskFilter === "all" || (taskFilter === "done" ? task.done : !task.done))
+    && (task.text || "").toLowerCase().includes(search.trim().toLowerCase());
+  const visibleCount = GROUPS.reduce((sum, group) => sum + groups[group.key].filter(matchesTask).length, 0);
 
   const addTask = async () => {
     const text = newText.trim();
@@ -547,7 +544,7 @@ export default function DailyTasks({ initialTasks, loadError }) {
   };
 
   return (
-    <div dir="rtl" lang="fa" style={{ background: C.bg, color: C.text, minHeight: "100vh" }}>
+    <div className="workspace-page" dir="rtl" lang="fa" style={{ background: C.bg, color: C.text, minHeight: "100vh" }}>
       <div className="max-w-2xl mx-auto px-4 py-8">
         <PageHeader theme={theme} toggleTheme={toggleTheme} mounted={mounted} />
 
@@ -607,7 +604,7 @@ export default function DailyTasks({ initialTasks, loadError }) {
               onChange={(e) => setNewText(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addTask()}
               placeholder="کار جدید + Enter"
-              className="flex-1 text-sm px-3 py-2.5 rounded-lg outline-none ops-input"
+              className="flex-1 min-w-0 text-sm px-3 py-2.5 rounded-lg outline-none ops-input"
             />
             <button onClick={addTask} className="text-xs px-4 py-2.5 rounded-lg font-medium ops-primary">
               افزودن
@@ -719,8 +716,12 @@ export default function DailyTasks({ initialTasks, loadError }) {
           </section>
         )}
 
+        <SectionToolbar value={search} onChange={setSearch} placeholder="جستجو در کارهای روزانه" count={visibleCount}
+          filters={[{key:"all",label:"همه کارها"},{key:"pending",label:"انجام‌نشده"},{key:"done",label:"انجام‌شده"}]}
+          selected={taskFilter} onFilter={setTaskFilter} />
+        {today && visibleCount === 0 && (search || taskFilter !== "all") && <EmptyState icon={ListTodo} dashed>کاری با این فیلتر پیدا نشد.</EmptyState>}
         {today && GROUPS.map(({ key, label, icon: Icon, tone: toneKey }) => {
-          const list = groups[key];
+          const list = groups[key].filter(matchesTask);
           if (!list.length) return null;
           const undone = list.filter((t) => !t.done).length;
           return (
@@ -744,8 +745,8 @@ export default function DailyTasks({ initialTasks, loadError }) {
                     task={t}
                     C={C}
                     today={today}
-                    isFirst={i === 0}
-                    isLast={i === list.length - 1}
+                    isFirst={groups[key][0]?.id === t.id}
+                    isLast={groups[key][groups[key].length - 1]?.id === t.id}
                     onPatch={patchTask}
                     onDelete={deleteTask}
                     onMove={moveTask}

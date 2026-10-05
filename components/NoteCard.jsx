@@ -89,19 +89,11 @@ export default function NoteCard({ note, onPatch, onDelete, slot = null }) {
       }}
     >
       <div className="flex items-start gap-2 mb-2">
-        <button
-          onClick={() =>
-            onPatch(note.id, {
-              priority: PRIORITY_ORDER[(PRIORITY_ORDER.indexOf(note.priority) + 1) % PRIORITY_ORDER.length],
-            })
-          }
-          title="کلیک برای تغییر اهمیت"
-          className="flex items-center gap-1 text-xs font-medium px-1.5 py-1 -mr-1.5 rounded-md ops-tap shrink-0"
-          style={{ color: tone(p.tone) }}
-        >
-          <span className="inline-block w-1.5 h-1.5 rounded-full shrink-0" style={{ background: tone(p.tone) }} />
-          {p.label}
-        </button>
+        <select aria-label="اهمیت یادداشت" value={note.priority || "medium"}
+          onChange={(e) => onPatch(note.id, { priority: e.target.value })}
+          className="ops-input text-xs font-medium rounded-md py-1 px-1 shrink-0 max-w-[90px]" style={{color:tone(p.tone)}}>
+          {PRIORITY_ORDER.map((key) => <option key={key} value={key}>{PRIORITY[key].label}</option>)}
+        </select>
         <textarea
           ref={autoGrow}
           rows={1}

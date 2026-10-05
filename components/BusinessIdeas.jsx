@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Lightbulb, Plus, ChevronUp, ChevronDown } from "lucide-react";
 import ConfirmDelete from "@/components/ConfirmDelete";
 import EmptyState from "@/components/EmptyState";
 import PageHeader from "@/components/PageHeader";
+import ContentEditor from "@/components/ContentEditor";
+import SectionToolbar from "@/components/SectionToolbar";
 import { createClient } from "@/lib/supabase/client";
 import { useTheme, tone, toneSoft } from "@/lib/theme";
 import { faNum } from "@/lib/format";
 import { useFlash } from "@/lib/useFlash";
-import { autoGrow } from "@/lib/autoGrow";
 
 /**
  * رتبه‌ی ۱ برجسته، ۲ و ۳ نیمه‌برجسته، بقیه خنثی ولی همچنان رنگ‌دار —
@@ -24,10 +25,6 @@ function rankTone(rank) {
 
 function IdeaCard({ idea, rank, total, C, onSaveField, onDelete, onMove }) {
   const [title, setTitle] = useState(idea.title);
-  const [description, setDescription] = useState(idea.description);
-  const areaRef = useRef(null);
-
-  useEffect(() => autoGrow(areaRef.current), [description]);
 
   const t = rankTone(rank);
   const isFirst = rank === 1;
@@ -68,16 +65,8 @@ function IdeaCard({ idea, rank, total, C, onSaveField, onDelete, onMove }) {
           className="w-full text-sm font-semibold bg-transparent outline-none mb-1"
           style={{ color: C.text }}
         />
-        <textarea
-          ref={areaRef}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          onBlur={() => onSaveField(idea.id, "description", description)}
-          rows={1}
-          placeholder="توضیحات ایده..."
-          className="w-full text-sm leading-relaxed bg-transparent outline-none resize-none overflow-hidden"
-          style={{ color: C.muted }}
-        />
+        <ContentEditor value={idea.description} label="جزئیات ایده" placeholder="فرصت، مخاطب و قدم بعدی این ایده…"
+          onSave={(value) => onSaveField(idea.id, "description", value)} />
       </div>
 
       <div className="shrink-0 flex flex-col items-center gap-0.5">
@@ -114,6 +103,8 @@ export default function BusinessIdeas({ initialIdeas, loadError }) {
   const [showAdd, setShowAdd] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
+  const [search, setSearch] = useState("");
+  const [ideaFilter, setIdeaFilter] = useState("all");
   const [errorMsg, flash] = useFlash();
   const supabase = createClient();
 
@@ -144,6 +135,9 @@ export default function BusinessIdeas({ initialIdeas, loadError }) {
     setShowAdd(false);
   };
 
+  const visible = ordered.map((idea, index) => ({ idea, rank: index + 1 })).filter(({ idea, rank }) =>
+    (ideaFilter !== "top" || rank <= 3) && [idea.title, idea.description].some((text) => (text || "").toLowerCase().includes(search.trim().toLowerCase())));
+
   const saveField = async (id, field, value) => {
     const current = ideas.find((i) => i.id === id);
     if (!current || current[field] === value) return;
@@ -153,7 +147,9 @@ export default function BusinessIdeas({ initialIdeas, loadError }) {
     if (error) {
       setIdeas(snapshot);
       flash("خطا در ذخیره تغییرات: " + error.message);
+      return false;
     }
+    return true;
   };
 
   const deleteIdea = async (id) => {
@@ -202,7 +198,7 @@ export default function BusinessIdeas({ initialIdeas, loadError }) {
   };
 
   return (
-    <div dir="rtl" lang="fa" style={{ background: C.bg, color: C.text, minHeight: "100vh" }}>
+    <div className="workspace-page" dir="rtl" lang="fa" style={{ background: C.bg, color: C.text, minHeight: "100vh" }}>
       <div className="max-w-2xl mx-auto px-4 py-8">
         <PageHeader theme={theme} toggleTheme={toggleTheme} mounted={mounted} />
 
@@ -288,12 +284,15 @@ export default function BusinessIdeas({ initialIdeas, loadError }) {
           <EmptyState icon={Lightbulb} dashed>هنوز ایده‌ای ثبت نشده.</EmptyState>
         )}
 
-        <ul className="space-y-2">
-          {ordered.map((idea, index) => (
+        <SectionToolbar value={search} onChange={setSearch} placeholder="جستجو در ایده‌ها" count={visible.length}
+          filters={[{key:"all",label:"همه ایده‌ها"},{key:"top",label:"سه ایده برتر"}]} selected={ideaFilter} onFilter={setIdeaFilter} />
+        {ordered.length > 0 && visible.length === 0 && <EmptyState icon={Lightbulb} dashed>ایده‌ای با این جستجو و فیلتر پیدا نشد.</EmptyState>}
+        <ul className="space-y-3">
+          {visible.map(({idea, rank}) => (
             <IdeaCard
               key={idea.id}
               idea={idea}
-              rank={index + 1}
+              rank={rank}
               total={ordered.length}
               C={C}
               onSaveField={saveField}
