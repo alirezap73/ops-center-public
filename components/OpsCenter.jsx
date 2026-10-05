@@ -1694,7 +1694,7 @@ export default function OpsCenter({
               همه پروژه‌ها
             </button>
 
-            <p className="px-3 pt-5 pb-1.5 text-xs font-semibold tracking-wider" style={{ color: C.faint }}>
+            <p className="px-3 pt-5 pb-1.5 text-xs font-medium" style={{ color: C.faint }}>
               پروژه‌ها · {faNum(activeProjects.length)}
             </p>
 
@@ -1883,7 +1883,7 @@ export default function OpsCenter({
               <GuideHelp section="sit-timer">آموزش تایمر</GuideHelp>
             </div>
 
-            <p className="px-3 pt-6 pb-1.5 text-xs font-semibold tracking-wider" style={{ color: C.faint }}>
+            <p className="px-3 pt-6 pb-1.5 text-xs font-medium" style={{ color: C.faint }}>
               راهنما و تاریخچه
             </p>
 
@@ -1902,7 +1902,7 @@ export default function OpsCenter({
               </Link>
             ))}
 
-            <p className="px-3 pt-6 pb-1.5 text-xs font-semibold tracking-wider" style={{ color: C.faint }}>
+            <p className="px-3 pt-6 pb-1.5 text-xs font-medium" style={{ color: C.faint }}>
               بکاپ
             </p>
             <GuideHelp section="restore">نگهداری و بازیابی بکاپ</GuideHelp>
@@ -2217,11 +2217,11 @@ export default function OpsCenter({
                     {badges.map(([s, meta, n]) => (
                       <span
                         key={s}
-                        className="mono tnum text-xs px-1.5 py-0.5 rounded"
+                        className="inline-flex items-center gap-2 text-xs font-medium px-2 py-1 rounded"
                         style={{ color: tone(meta.tone), background: toneSoft(meta.tone) }}
                         title={meta.label}
                       >
-                        {meta.label} · {faNum(n)}
+                        <span>{meta.label}</span><span className="tnum" dir="ltr">{faNum(n)}</span>
                       </span>
                     ))}
                   </div>
@@ -2619,7 +2619,7 @@ export default function OpsCenter({
                       }
                       return (
                         <>
-                          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 items-start">
+                          <div className="flex flex-col gap-3" aria-label="یادداشت‌های پروژه">
                             {shown.map((n) => (
                               <div key={n.id} className="min-w-0">
                                 <NoteCard

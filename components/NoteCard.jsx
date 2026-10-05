@@ -106,7 +106,7 @@ export default function NoteCard({ note, onPatch, onDelete, slot = null }) {
           }}
           placeholder="عنوان یادداشت"
           aria-label="عنوان یادداشت"
-          className="flex-1 min-w-0 text-base font-semibold leading-7 bg-transparent outline-none resize-none overflow-hidden rounded-md"
+          className="flex-1 min-w-0 text-base font-medium leading-7 bg-transparent outline-none resize-none overflow-hidden rounded-md"
           style={{ color: C.text }}
         />
         <button
