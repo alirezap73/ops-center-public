@@ -5,6 +5,7 @@ import { ArrowRight, Sun, Moon } from "lucide-react";
 import { C } from "@/lib/theme";
 import SitTimer from "@/components/SitTimer";
 import GuideHelp from "@/components/GuideHelp";
+import WorkspaceNav from "@/components/WorkspaceNav";
 import { usePathname } from "next/navigation";
 
 /**
@@ -15,7 +16,8 @@ export default function PageHeader({ theme, toggleTheme, mounted }) {
   const pathname = usePathname();
   const guideSection = { "/tasks": "daily-workflow", "/notes": "tool-notes", "/ideas": "tool-ideas", "/roadmap": "tool-roadmap" }[pathname] || "find-your-way";
   return (
-    <div className="flex flex-wrap gap-2 items-center justify-between mb-6">
+    <div className="mb-6 space-y-3">
+    <div className="flex flex-wrap gap-2 items-center justify-between">
       <Link
         href="/dashboard"
         className="inline-flex items-center gap-1.5 text-xs px-2 py-1 -mr-2 rounded-lg ops-tap"
@@ -40,6 +42,8 @@ export default function PageHeader({ theme, toggleTheme, mounted }) {
           <span className="sr-only">تغییر حالت روشن/تیره</span>
         </button>
       </div>
+    </div>
+    <WorkspaceNav />
     </div>
   );
 }

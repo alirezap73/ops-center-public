@@ -12,11 +12,12 @@ import {
   Globe, Send, Instagram, ListChecks, CalendarDays, Map as MapIcon, StickyNote,
   ArrowRight, ArrowLeft, Megaphone, Lightbulb, ListTodo, NotebookPen,
   Link2, Server, BarChart3, Database, Github, Gauge, Pencil, ExternalLink, Download,
-  Twitter, Youtube, Newspaper, MessageCircle, MoreHorizontal, Swords, BookOpen
+  Twitter, Youtube, Newspaper, MessageCircle, MoreHorizontal, Swords, BookOpen, Menu, Filter
 } from "lucide-react";
 import { safeHref, hostOf } from "@/lib/url";
 import NoteCard from "@/components/NoteCard";
 import NoteContentEditor from "@/components/ContentEditor";
+import WorkspaceNav from "@/components/WorkspaceNav";
 import ConfirmDelete from "@/components/ConfirmDelete";
 import EmptyState from "@/components/EmptyState";
 import SitTimer from "@/components/SitTimer";
@@ -221,9 +222,9 @@ function SummaryRow({ statusTone, statusLabel, badge, badgeTone, title, meta }) 
   );
 }
 
-function BoardSummary({ items, kind, onOpen }) {
+function BoardSummary({ items, kind, onOpen, showAll = false }) {
   const actionable = items
-    .filter((i) => i.status !== "done")
+    .filter((i) => showAll || i.status !== "done")
     .slice()
     .sort((a, b) => {
       const byStatus =
@@ -291,9 +292,9 @@ function BoardSummary({ items, kind, onOpen }) {
  * همان منطق BoardSummary، ولی برای ماژول‌ها — چون در حالت «همه پروژه‌ها»
  * لیست آکاردئونی هر چهار پروژه پشت سر هم می‌آمد و صفحه بی‌اندازه بلند می‌شد.
  */
-function ModulesSummary({ modules, onOpen }) {
+function ModulesSummary({ modules, onOpen, showAll = false }) {
   const actionable = modules
-    .filter((m) => m.status !== "done")
+    .filter((m) => showAll || m.status !== "done")
     .slice()
     .sort(
       (a, b) =>
@@ -376,9 +377,9 @@ function MoreLine({ rest, onOpen }) {
 }
 
 /** همان الگو برای تقویم محتوا — «منتشر شده» کار تمام‌شده حساب می‌شود */
-function ContentSummary({ items, onOpen }) {
+function ContentSummary({ items, onOpen, showAll = false }) {
   const actionable = items
-    .filter((i) => i.status !== "published")
+    .filter((i) => showAll || i.status !== "published")
     .slice()
     .sort(
       (a, b) =>
@@ -1051,7 +1052,7 @@ export default function OpsCenter({
   const [competitorItems, setCompetitorItems] = useState(initialCompetitorItems || []);
   const [showAddCompetitor, setShowAddCompetitor] = useState(false);
   const [newCompetitorName, setNewCompetitorName] = useState("");
-  const [view, setView] = useState("modules"); // "modules" | "content" | "updates" | "ads"
+  const [view, setViewState] = useState("modules");
   const [showAddUpdate, setShowAddUpdate] = useState(null); // status key or null
   const [newUpdateText, setNewUpdateText] = useState("");
   const [newUpdateVersion, setNewUpdateVersion] = useState("");
@@ -1062,6 +1063,12 @@ export default function OpsCenter({
   const [expanded, setExpanded] = useState(null);
   const [expandedContent, setExpandedContent] = useState(null);
   const [search, setSearch] = useState("");
+  const [projectSearch, setProjectSearch] = useState("");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState(null);
+  const [showOverview, setShowOverview] = useState(false);
+  const searchRef = useRef(null);
+  const projectNameRef = useRef(null);
   const [showAddModule, setShowAddModule] = useState(false);
   const [newModTitle, setNewModTitle] = useState("");
   const [newModCategory, setNewModCategory] = useState("");
@@ -1075,6 +1082,34 @@ export default function OpsCenter({
   const [newProjTag, setNewProjTag] = useState("");
   const [errorMsg, flash] = useFlash(4000);
   const { theme, toggleTheme, mounted } = useTheme();
+
+  const setView = (next) => {
+    setViewState(next);
+    setStatusFilter(null);
+    setSearch("");
+  };
+
+  useEffect(() => {
+    const shortcut = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", shortcut);
+    return () => window.removeEventListener("keydown", shortcut);
+  }, []);
+
+  const selectProject = (id) => {
+    setActiveId(id);
+    setMobileNavOpen(false);
+    setStatusFilter(null);
+    setSearch("");
+  };
+
+  useEffect(() => {
+    if (showAddProject) projectNameRef.current?.focus();
+  }, [showAddProject, mobileNavOpen]);
 
   const updateProjectLocal = (pid, fn) =>
     setProjects((prev) => prev.map((p) => (p.id === pid ? fn(p) : p)));
@@ -1124,20 +1159,22 @@ export default function OpsCenter({
     updateProjectLocal(pid, (p) => ({ ...p, modules: p.modules.filter((mm) => mm.id !== mid) }));
   };
 
-  const cycleStatus = async (pid, mid, current) => {
-    const idx = STATUS_ORDER.indexOf(current);
-    const next = STATUS_ORDER[(idx + 1) % STATUS_ORDER.length];
+  const setModuleStatus = async (pid, mid, current, next) => {
     updateModuleLocal(pid, mid, (mm) => ({ ...mm, status: next }));
     const { error } = await supabase.from("modules").update({ status: next }).eq("id", mid);
-    if (error) flash("خطا در ذخیره وضعیت: " + error.message);
+    if (error) {
+      updateModuleLocal(pid, mid, (mm) => mm.status === next ? { ...mm, status: current } : mm);
+      flash("خطا در ذخیره وضعیت: " + error.message);
+    }
   };
 
-  const cyclePriority = async (pid, mid, current) => {
-    const idx = PRIORITY_ORDER.indexOf(current);
-    const next = PRIORITY_ORDER[(idx + 1) % PRIORITY_ORDER.length];
+  const setModulePriority = async (pid, mid, current, next) => {
     updateModuleLocal(pid, mid, (mm) => ({ ...mm, priority: next }));
     const { error } = await supabase.from("modules").update({ priority: next }).eq("id", mid);
-    if (error) flash("خطا در ذخیره اولویت: " + error.message);
+    if (error) {
+      updateModuleLocal(pid, mid, (mm) => mm.priority === next ? { ...mm, priority: current } : mm);
+      flash("خطا در ذخیره اولویت: " + error.message);
+    }
   };
 
   const saveNotes = async (mid, notes) => {
@@ -1506,10 +1543,12 @@ export default function OpsCenter({
   // پروژه‌ی آرشیوشده در لیست‌ها و آمار نمی‌آید، ولی اگر مستقیم انتخابش کنی دیده می‌شود
   const activeProjects = projects.filter((p) => !p.archived);
   const archivedProjects = projects.filter((p) => p.archived);
-  const archivedIds = new Set(archivedProjects.map((p) => p.id));
-  const notArchived = (x) => !archivedIds.has(x.project_id);
+  const visibleProjects =
+    activeId === "all" ? activeProjects : projects.filter((p) => p.id === activeId);
+  const scopedIds = new Set(visibleProjects.map((p) => p.id));
+  const notArchived = (x) => scopedIds.has(x.project_id);
 
-  const allModulesFlat = activeProjects.flatMap((p) => p.modules.map((mm) => ({ ...mm, projectId: p.id })));
+  const allModulesFlat = visibleProjects.flatMap((p) => p.modules.map((mm) => ({ ...mm, projectId: p.id })));
   const stats = STATUS_ORDER.reduce((acc, s) => {
     acc[s] = allModulesFlat.filter((mm) => mm.status === s).length;
     return acc;
@@ -1532,8 +1571,6 @@ export default function OpsCenter({
     acc[s] = competitorItems.filter((c) => notArchived(c) && c.verdict === s).length;
     return acc;
   }, {});
-  const visibleProjects =
-    activeId === "all" ? activeProjects : projects.filter((p) => p.id === activeId);
 
   // تعداد آیتم‌های هر تب برای همان چیزی که الان نمایش داده می‌شود
   // (همه‌ی پروژه‌ها یا فقط پروژه‌ی انتخاب‌شده)
@@ -1565,17 +1602,20 @@ export default function OpsCenter({
   };
 
   const q = search.trim().toLowerCase();
+  const matchesStatus = (item) => !statusFilter || (view === "notes"
+    ? statusFilter === "all" || item.pinned
+    : (view === "competitors" ? item.verdict : item.status) === statusFilter);
   const matchesSearch = (mm) =>
-    !q || mm.title.toLowerCase().includes(q) || mm.category.toLowerCase().includes(q);
-  const matchesSearchContent = (ci) => !q || ci.title.toLowerCase().includes(q);
+    matchesStatus(mm) && (!q || [mm.title, mm.category, mm.notes].some((f) => (f || "").toLowerCase().includes(q)));
+  const matchesSearchContent = (ci) => matchesStatus(ci) && (!q || [ci.title, ci.body].some((f) => (f || "").toLowerCase().includes(q)));
   // نماهای کانبان هم جستجو می‌شوند تا کادر جستجو در همه‌ی تب‌ها یکسان عمل کند
   const matchesSearchUpdate = (u) =>
-    !q || u.text.toLowerCase().includes(q) || (u.version || "").toLowerCase().includes(q);
-  const matchesSearchAd = (a) => !q || a.text.toLowerCase().includes(q);
+    matchesStatus(u) && (!q || u.text.toLowerCase().includes(q) || (u.version || "").toLowerCase().includes(q));
+  const matchesSearchAd = (a) => matchesStatus(a) && (!q || a.text.toLowerCase().includes(q));
   const matchesSearchNote = (n) =>
-    !q || [n.title, n.body, n.url, n.tags].some((f) => (f || "").toLowerCase().includes(q));
+    matchesStatus(n) && (!q || [n.title, n.body, n.url, n.tags].some((f) => (f || "").toLowerCase().includes(q)));
   const matchesSearchCompetitor = (c) =>
-    !q || [c.name, c.url, c.note, c.advantage].some((f) => (f || "").toLowerCase().includes(q));
+    matchesStatus(c) && (!q || [c.name, c.url, c.note, c.advantage].some((f) => (f || "").toLowerCase().includes(q)));
 
   // نوار آمار بالای صفحه برای هر تب داده‌ی خودش را می‌گیرد
   const activeStats = {
@@ -1587,8 +1627,24 @@ export default function OpsCenter({
     competitors: { order: COMPETITOR_VERDICT_ORDER, map: COMPETITOR_VERDICT, counts: competitorStats },
   }[view];
 
+  const scopedItems = {
+    modules: allModulesFlat,
+    content: contentItems.filter(notArchived),
+    updates: updateItems.filter(notArchived),
+    ads: adItems.filter(notArchived),
+    notes: liveNotes,
+    competitors: competitorItems.filter(notArchived),
+  }[view];
+  const matchItem = { modules: matchesSearch, content: matchesSearchContent, updates: matchesSearchUpdate,
+    ads: matchesSearchAd, notes: matchesSearchNote, competitors: matchesSearchCompetitor }[view];
+  const filteredItems = scopedItems.filter(matchItem);
+  const matchingProjectIds = new Set(filteredItems.map((item) => item.projectId || item.project_id));
+  const displayedProjects = search.trim() || statusFilter
+    ? visibleProjects.filter((project) => matchingProjectIds.has(project.id)) : visibleProjects;
+
   return (
     <div style={{ background: C.bg, color: C.text, minHeight: "100vh" }}>
+      <a href="#workspace-main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:right-2 focus:z-50 ops-primary rounded-lg px-4 py-2 text-sm">رفتن به محتوای پنل</a>
       <div className="flex flex-col lg:flex-row" style={{ minHeight: "100vh" }}>
         {/* Sidebar */}
         <aside
@@ -1637,10 +1693,17 @@ export default function OpsCenter({
             </div>
           </div>
 
-          <nav className="p-2 pb-6">
+          <button type="button" onClick={() => setMobileNavOpen((v) => !v)} aria-expanded={mobileNavOpen} aria-controls="workspace-sidebar"
+            className="lg:hidden flex items-center justify-between w-full px-4 py-3 text-sm ops-tap" style={{ color: C.text }}>
+            <span className="flex items-center gap-2"><Menu size={18} />پروژه‌ها و ابزارها</span>
+            <span className="flex items-center gap-2 text-xs" style={{ color: C.muted }}>{activeId === "all" ? "همه پروژه‌ها" : visibleProjects[0]?.name}{mobileNavOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</span>
+          </button>
+          <nav id="workspace-sidebar" aria-label="ناوبری پنل" className={`${mobileNavOpen ? "block" : "hidden"} lg:block p-3 pb-6`}>
+            <WorkspaceNav compact />
             <button
-              onClick={() => setActiveId("all")}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm ops-tap"
+              onClick={() => selectProject("all")}
+              aria-pressed={activeId === "all"}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm ops-tap mt-3"
               style={{
                 background: activeId === "all" ? C.panelAlt : "transparent",
                 color: activeId === "all" ? C.text : C.muted,
@@ -1652,10 +1715,21 @@ export default function OpsCenter({
             </button>
 
             <p className="px-3 pt-5 pb-1.5 text-xs font-semibold tracking-wider" style={{ color: C.faint }}>
-              پروژه‌ها
+              پروژه‌ها · {faNum(activeProjects.length)}
             </p>
 
+            <div className="relative mb-3">
+              <Search size={14} className="absolute right-3 top-3" style={{ color: C.faint }} />
+              <input aria-label="پیدا کردن پروژه" value={projectSearch} onChange={(e) => setProjectSearch(e.target.value)}
+                placeholder="پیدا کردن پروژه…" className="ops-input w-full rounded-lg pr-9 pl-8 py-2 text-xs" />
+              {projectSearch && <button type="button" aria-label="پاک کردن جستجوی پروژه" onClick={() => setProjectSearch("")}
+                className="absolute left-1 top-1 p-2 rounded ops-tap"><X size={13} /></button>}
+            </div>
+            {projectSearch && !activeProjects.some((p) => [p.name, p.tagline].some((f) => (f || "").toLowerCase().includes(projectSearch.toLowerCase().trim()))) &&
+              <p className="text-xs px-3 py-2" style={{ color: C.muted }}>پروژه‌ای پیدا نشد.</p>}
+
             {activeProjects.map((p, i) => {
+              if (projectSearch.trim() && ![p.name, p.tagline].some((f) => (f || "").toLowerCase().includes(projectSearch.toLowerCase().trim()))) return null;
               const total = p.modules.length;
               const done = p.modules.filter((mm) => mm.status === "done").length;
               const pct = total ? Math.round((done / total) * 100) : 0;
@@ -1673,7 +1747,8 @@ export default function OpsCenter({
                   }}
                 >
                   <button
-                    onClick={() => setActiveId(p.id)}
+                    onClick={() => selectProject(p.id)}
+                    aria-pressed={isActive}
                     className="flex-1 min-w-0 flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-right ops-tap"
                   >
                     <span className="relative shrink-0" style={{ width: 22, height: 22 }}>
@@ -1741,6 +1816,8 @@ export default function OpsCenter({
             ) : (
               <div className="mt-2 p-2 rounded-lg" style={{ background: C.panelAlt }}>
                 <input
+                  ref={projectNameRef}
+                  aria-label="نام پروژه جدید"
                   value={newProjName}
                   onChange={(e) => setNewProjName(e.target.value)}
                   placeholder="نام پروژه (مثلا: yamix.io)"
@@ -1795,7 +1872,7 @@ export default function OpsCenter({
                       }}
                     >
                       <button
-                        onClick={() => setActiveId(p.id)}
+                        onClick={() => selectProject(p.id)}
                         className="flex-1 min-w-0 flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-right ops-tap"
                         title="دیدن این پروژه"
                       >
@@ -1827,15 +1904,12 @@ export default function OpsCenter({
             </div>
 
             <p className="px-3 pt-6 pb-1.5 text-xs font-semibold tracking-wider" style={{ color: C.faint }}>
-              مستقل از پروژه
+              راهنما و تاریخچه
             </p>
 
             {[
               { href: "/guide", icon: BookOpen, label: "راهنمای استفاده" },
               { href: "/roadmap", icon: MapIcon, label: "رودمپ" },
-              { href: "/notes", icon: NotebookPen, label: "یادداشت‌های روزانه" },
-              { href: "/ideas", icon: Lightbulb, label: "ایده‌های کسب‌وکار" },
-              { href: "/tasks", icon: ListTodo, label: "کارهای روزانه" },
             ].map(({ href, icon: Icon, label }) => (
               <Link
                 key={href}
@@ -1881,7 +1955,16 @@ export default function OpsCenter({
         </aside>
 
         {/* Main */}
-        <main className="flex-1 min-w-0">
+        <main id="workspace-main" tabIndex={-1} className="flex-1 min-w-0">
+          <div className="px-4 sm:px-6 py-5 flex items-start justify-between gap-3 border-b" style={{ borderColor: C.border }}>
+            <div className="min-w-0">
+              <p className="text-xs mb-1" style={{ color: C.faint }}>فضای کاری / {activeId === "all" ? "نمای کلی" : "پروژه"}</p>
+              <h2 className="text-xl font-bold truncate">{activeId === "all" ? "همه پروژه‌ها" : visibleProjects[0]?.name || "پروژه"}</h2>
+              <p className="text-xs mt-2 leading-6" style={{ color: C.muted }}>{faNum(visibleProjects.length)} پروژه · {faNum(allModulesFlat.length)} ماژول · {TABS.find((t) => t.key === view)?.label}</p>
+            </div>
+            <button type="button" onClick={() => { setShowAddProject(true); setMobileNavOpen(true); }}
+              className="ops-primary shrink-0 rounded-lg px-3 py-2.5 text-xs font-semibold flex items-center gap-1"><Plus size={15} />پروژه جدید</button>
+          </div>
           <div className="sticky top-0 z-20" style={{ background: C.bg }}>
             {loadError && (
               <div
@@ -1908,7 +1991,7 @@ export default function OpsCenter({
 
             {/* View tabs — الگوی W3C: ناوبری با کلید جهت‌دار و tabindex چرخشی */}
             <div
-              className="px-5 flex items-center gap-1 overflow-x-auto border-b"
+              className="px-3 sm:px-5 flex items-center gap-1 overflow-x-auto border-b"
               style={{ borderColor: C.border }}
               role="tablist"
               aria-label="نمای پروژه"
@@ -1965,45 +2048,51 @@ export default function OpsCenter({
             </div>
 
             {/* Stats + search — شروع پنلِ متناظر با تب فعال */}
-            <div className="px-5 py-2 flex flex-wrap gap-2 items-center justify-between" style={{ borderBottom: `1px solid ${C.border}` }}>
+            <div className="hidden lg:flex px-5 py-2 flex-wrap gap-2 items-center justify-between" style={{ borderBottom: `1px solid ${C.border}` }}>
               <span className="text-xs leading-6" style={{ color: C.muted }}>{activeId === "all" ? "برای افزودن یا ویرایش، ابتدا یک پروژه را از فهرست انتخاب کن." : "برای دیدن روش کار و توضیح کنترل‌ها، راهنمای همین بخش را باز کن."}</span>
               <GuideHelp section={view === "notes" ? "project-notes" : view === "competitors" ? "links-competitors" : view} />
             </div>
             <div
-              id={`panel-${view}`}
-              role="tabpanel"
-              aria-labelledby={`tab-${view}`}
-              className="px-5 py-3 border-b flex flex-wrap items-center gap-2"
+              role="region"
+              aria-label="فیلترهای بخش فعلی"
+              className="px-3 sm:px-5 py-3 border-b flex flex-wrap items-center gap-2"
               style={{ borderColor: C.border }}
             >
               {activeStats.order.map((s) => (
                 // حاشیه‌ی این قرص‌ها روی پنلِ حاشیه‌دار فقط نویز بود؛ پس‌زمینه کافی است
-                <div
+                <button
                   key={s}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
-                  style={{ background: C.panelAlt }}
+                  type="button"
+                  onClick={() => setStatusFilter((current) => current === s ? null : s)}
+                  aria-pressed={statusFilter === s}
+                  title={`فیلتر ${activeStats.map[s].label}`}
+                  className="ops-tap flex items-center gap-1.5 px-2.5 py-2 rounded-lg"
+                  style={{ background: statusFilter === s ? toneSoft(activeStats.map[s].tone) : C.panelAlt,
+                    boxShadow: statusFilter === s ? `inset 0 0 0 1px ${tone(activeStats.map[s].tone)}` : undefined }}
                 >
                   <span
                     className="w-1.5 h-1.5 rounded-full shrink-0"
                     style={{ background: tone(activeStats.map[s].tone) }}
                   />
                   <span className="text-xs" style={{ color: C.muted }}>{activeStats.map[s].label}</span>
-                  <span className="mono tnum text-xs font-semibold">{activeStats.counts[s]}</span>
-                </div>
+                  <span className="mono tnum text-xs font-semibold">{faNum(activeStats.counts[s])}</span>
+                </button>
               ))}
               <div className="flex-1 min-w-4" />
-              <div className="relative">
+              <div className="relative w-full sm:w-auto">
                 <Search
                   size={14}
                   className="absolute top-1/2 -translate-y-1/2 right-2.5 pointer-events-none"
                   style={{ color: C.faint }}
                 />
                 <input
+                  ref={searchRef}
+                  aria-label="جستجو در بخش فعلی"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   onKeyDown={(e) => e.key === "Escape" && setSearch("")}
                   placeholder={SEARCH_PLACEHOLDER[view]}
-                  className={`text-sm pr-8 py-1.5 rounded-lg outline-none w-44 sm:w-52 ops-input ${
+                  className={`text-sm pr-8 py-2 rounded-lg outline-none w-full sm:w-60 ops-input ${
                     search ? "pl-8" : "pl-3"
                   }`}
                 />
@@ -2019,19 +2108,49 @@ export default function OpsCenter({
                   </button>
                 )}
               </div>
+              {(statusFilter || search) && <div className="flex items-center gap-2 w-full text-xs" role="status" style={{ color: C.muted }}>
+                <Filter size={13} /><span>{faNum(filteredItems.length)} نتیجه · {statusFilter ? activeStats.map[statusFilter]?.label : "جستجو"}{search && ` · «${search}»`}</span>
+                <button type="button" onClick={() => { setStatusFilter(null); setSearch(""); }} className="ops-tap rounded px-2 py-1" style={{ color: tone("blue") }}>پاک کردن فیلترها</button>
+              </div>}
             </div>
           </div>
 
-          <div className="p-5 space-y-5">
+          <div id={`panel-${view}`} role="tabpanel" aria-labelledby={`tab-${view}`} className="p-3 sm:p-5 space-y-5">
+            {view === "modules" && allModulesFlat.length > 0 && <section aria-label="خلاصه وضعیت پروژه‌ها">
+              <button type="button" onClick={() => setShowOverview((v) => !v)} aria-expanded={showOverview} aria-controls="workspace-overview"
+                className="lg:hidden ops-tap w-full flex items-center justify-between rounded-lg p-3 text-xs mb-2" style={{ background: C.panelAlt, color: C.muted }}>
+                <span>خلاصه وضعیت · {faNum(Math.round((stats.done / allModulesFlat.length) * 100))}٪ انجام‌شده</span>
+                {showOverview ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+              </button>
+              <div id="workspace-overview" className={`${showOverview ? "grid" : "hidden"} lg:grid grid-cols-2 xl:grid-cols-4 gap-3`}>
+              {[
+                ["پیشرفت ماژول‌ها", `${faNum(Math.round((stats.done / allModulesFlat.length) * 100))}٪`, "jade", null],
+                ["در حال انجام", faNum(stats.in_progress), "amber", "in_progress"],
+                ["نیاز به بررسی", faNum(stats.needs_review), "violet", "needs_review"],
+                ["مسدود", faNum(stats.blocked), "red", "blocked"],
+              ].map(([label, count, color, status]) => <button type="button" key={label}
+                onClick={() => { setView("modules"); setSearch(""); setStatusFilter(status); }}
+                className="ops-card text-right rounded-xl p-3 sm:p-4" style={{ background: C.panel, border: `1px solid ${C.border}` }}>
+                <span className="block text-xs" style={{ color: C.muted }}>{label}</span>
+                <span className="block text-2xl font-bold mt-2 tnum" style={{ color: tone(color) }}>{count}</span>
+                <span className="block text-xs mt-2" style={{ color: C.faint }}>{status ? "مشاهده ماژول‌ها ←" : `${faNum(stats.done)} از ${faNum(allModulesFlat.length)} انجام‌شده`}</span>
+              </button>)}
+              </div>
+            </section>}
             {projects.length === 0 && (
               <div className="rounded-xl" style={{ border: `1px dashed ${C.border}` }}>
                 <EmptyState icon={LayoutGrid}>
-                  هنوز پروژه‌ای ثبت نشده. با دکمه «پروژه جدید» در سایدبار اولین پروژه‌ات را بساز.
+                  <span>هنوز پروژه‌ای ثبت نشده. اولین پروژه‌ات را بساز و کارها را قدم‌به‌قدم جلو ببر.</span>
+                  <button type="button" onClick={() => { setShowAddProject(true); setMobileNavOpen(true); }} className="ops-primary rounded-lg px-4 py-2 mt-3 text-xs">ساخت اولین پروژه</button>
                 </EmptyState>
               </div>
             )}
 
-            {visibleProjects.map((p) => {
+            {(search.trim() || statusFilter) && filteredItems.length === 0 && <EmptyState icon={Search} dashed>
+              موردی با این فیلترها پیدا نشد. وضعیت دیگری انتخاب کن یا فیلترها را پاک کن.
+            </EmptyState>}
+
+            {displayedProjects.map((p) => {
               const projStats = STATUS_ORDER.reduce((acc, s) => {
                 acc[s] = p.modules.filter((mm) => mm.status === s).length;
                 return acc;
@@ -2091,7 +2210,10 @@ export default function OpsCenter({
                     <Ring pct={projPct} color={p.accent} trackColor={C.borderStrong} size={26} />
                   </span>
                   <div className="flex-1 min-w-0">
-                    <h2 className="font-semibold text-sm leading-tight truncate">{p.name}</h2>
+                    <h2 className="font-semibold text-base leading-tight truncate">
+                      {activeId === p.id ? p.name : <button type="button" onClick={() => selectProject(p.id)}
+                        className="ops-tap rounded text-right" title="باز کردن پروژه">{p.name} <ArrowLeft size={13} className="inline-block mr-1" /></button>}
+                    </h2>
                     {p.tagline && (
                       <p className="text-xs mt-0.5 truncate" style={{ color: C.muted }}>{p.tagline}</p>
                     )}
@@ -2119,7 +2241,7 @@ export default function OpsCenter({
                         style={{ color: tone(meta.tone), background: toneSoft(meta.tone) }}
                         title={meta.label}
                       >
-                        {n}
+                        {meta.label} · {faNum(n)}
                       </span>
                     ))}
                   </div>
@@ -2220,6 +2342,7 @@ export default function OpsCenter({
 
                 {view === "modules" && activeId !== p.id && (
                   <ModulesSummary
+                    showAll={Boolean(q || statusFilter)}
                     modules={p.modules.filter(matchesSearch)}
                     onOpen={() => setActiveId(p.id)}
                   />
@@ -2234,6 +2357,7 @@ export default function OpsCenter({
 
                 {view === "content" && activeId !== p.id && (
                   <ContentSummary
+                    showAll={Boolean(q || statusFilter)}
                     items={projContent.filter(matchesSearchContent)}
                     onOpen={() => setActiveId(p.id)}
                   />
@@ -2248,6 +2372,7 @@ export default function OpsCenter({
 
                 {view === "updates" && activeId !== p.id && (
                   <BoardSummary
+                    showAll={Boolean(q || statusFilter)}
                     items={projUpdates.filter(matchesSearchUpdate)}
                     kind="updates"
                     onOpen={() => setActiveId(p.id)}
@@ -2354,6 +2479,7 @@ export default function OpsCenter({
                 {view === "ads" && activeId !== p.id && (
                   <BoardSummary
                     items={projAds.filter(matchesSearchAd)}
+                    showAll={Boolean(q || statusFilter)}
                     kind="ads"
                     onOpen={() => setActiveId(p.id)}
                   />
@@ -2633,22 +2759,20 @@ export default function OpsCenter({
                       {isOpen && (
                         <div className="px-4 pb-4 pt-3" style={{ background: C.panelAlt }}>
                           <div className="flex flex-wrap items-center gap-2 mb-4">
-                            <button
-                              onClick={() => cycleStatus(p.id, mm.id, mm.status)}
-                              className="text-xs px-2.5 py-1.5 rounded-lg ops-tap"
-                              style={{ border: `1px solid ${C.border}`, color: tone(STATUS[mm.status].tone) }}
-                              title="کلیک برای تغییر وضعیت"
-                            >
-                              وضعیت: {STATUS[mm.status].label}
-                            </button>
-                            <button
-                              onClick={() => cyclePriority(p.id, mm.id, mm.priority)}
-                              className="text-xs px-2.5 py-1.5 rounded-lg ops-tap"
-                              style={{ border: `1px solid ${C.border}`, color: tone(PRIORITY[mm.priority].tone) }}
-                              title="کلیک برای تغییر اولویت"
-                            >
-                              اولویت: {PRIORITY[mm.priority].label}
-                            </button>
+                            <label className="flex items-center gap-2 text-xs" style={{ color: C.muted }}>وضعیت
+                              <select aria-label={`وضعیت ${mm.title}`} value={mm.status}
+                                onChange={(e) => setModuleStatus(p.id, mm.id, mm.status, e.target.value)}
+                                className="ops-input rounded-lg px-2.5 py-2" style={{ color: tone(STATUS[mm.status].tone) }}>
+                                {STATUS_ORDER.map((key) => <option key={key} value={key}>{STATUS[key].label}</option>)}
+                              </select>
+                            </label>
+                            <label className="flex items-center gap-2 text-xs" style={{ color: C.muted }}>اولویت
+                              <select aria-label={`اولویت ${mm.title}`} value={mm.priority}
+                                onChange={(e) => setModulePriority(p.id, mm.id, mm.priority, e.target.value)}
+                                className="ops-input rounded-lg px-2.5 py-2" style={{ color: tone(PRIORITY[mm.priority].tone) }}>
+                                {PRIORITY_ORDER.map((key) => <option key={key} value={key}>{PRIORITY[key].label}</option>)}
+                              </select>
+                            </label>
                             <ConfirmDelete
                               onConfirm={() => deleteModule(p.id, mm.id)}
                               size={12}
