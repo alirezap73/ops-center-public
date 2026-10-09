@@ -1648,7 +1648,6 @@ export default function OpsCenter({
                 v{version}
               </Link>
               <p className="text-xs mt-1 truncate" style={{ color: C.faint }}>{userEmail}</p>
-              <div className="mt-2"><IranClock /></div>
             </div>
             <div className="flex items-center gap-0.5 shrink-0">
               <button
@@ -1675,6 +1674,7 @@ export default function OpsCenter({
             </div>
           </div>
 
+          <div className="px-3 pt-3 [&>div]:w-full"><IranClock /></div>
           <button type="button" onClick={() => setMobileNavOpen((v) => !v)} aria-expanded={mobileNavOpen} aria-controls="workspace-sidebar"
             className="lg:hidden flex items-center justify-between w-full px-4 py-3 text-sm ops-tap" style={{ color: C.text }}>
             <span className="flex items-center gap-2"><Menu size={18} />پروژه‌ها و ابزارها</span>
