@@ -18,6 +18,7 @@ import { safeHref, hostOf } from "@/lib/url";
 import NoteCard from "@/components/NoteCard";
 import NoteContentEditor from "@/components/ContentEditor";
 import WorkspaceNav from "@/components/WorkspaceNav";
+import IranClock from "@/components/IranClock";
 import ConfirmDelete from "@/components/ConfirmDelete";
 import EmptyState from "@/components/EmptyState";
 import SitTimer from "@/components/SitTimer";
@@ -1647,6 +1648,7 @@ export default function OpsCenter({
                 v{version}
               </Link>
               <p className="text-xs mt-1 truncate" style={{ color: C.faint }}>{userEmail}</p>
+              <div className="mt-2"><IranClock /></div>
             </div>
             <div className="flex items-center gap-0.5 shrink-0">
               <button

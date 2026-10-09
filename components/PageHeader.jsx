@@ -6,6 +6,7 @@ import { C } from "@/lib/theme";
 import SitTimer from "@/components/SitTimer";
 import GuideHelp from "@/components/GuideHelp";
 import WorkspaceNav from "@/components/WorkspaceNav";
+import IranClock from "@/components/IranClock";
 import { usePathname } from "next/navigation";
 
 /**
@@ -43,7 +44,10 @@ export default function PageHeader({ theme, toggleTheme, mounted }) {
         </button>
       </div>
     </div>
-    <WorkspaceNav />
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <WorkspaceNav />
+      <IranClock />
+    </div>
     </div>
   );
 }
