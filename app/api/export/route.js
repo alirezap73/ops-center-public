@@ -16,6 +16,7 @@ const TABLES = [
   "project_links",
   "notes",
   "competitor_items",
+  "customers",
   "business_ideas",
   "daily_tasks",
 ];
