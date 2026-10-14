@@ -186,7 +186,7 @@ html {
 }
 
 @media (hover: hover) {
-  .ops-tap:hover:not(:disabled) {
+  .ops-tap:not(.ops-primary):hover:not(:disabled) {
     background-color: var(--hover-veil);
   }
 }
@@ -245,6 +245,10 @@ html {
 
 .ops-primary:hover:not(:disabled) {
   filter: brightness(1.08);
+}
+
+:root[data-theme="light"] .ops-primary:hover:not(:disabled) {
+  filter: brightness(0.94);
 }
 
 .ops-primary:disabled {
