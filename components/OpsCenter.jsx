@@ -12,11 +12,12 @@ import {
   Globe, Send, Instagram, ListChecks, CalendarDays, Map as MapIcon, StickyNote,
   ArrowRight, ArrowLeft, Megaphone, Lightbulb, ListTodo, NotebookPen,
   Link2, Server, BarChart3, Database, Github, Gauge, Pencil, ExternalLink, Download,
-  Twitter, Youtube, Newspaper, MessageCircle, MoreHorizontal, Swords, BookOpen, Menu, Filter
+  Twitter, Youtube, Newspaper, MessageCircle, MoreHorizontal, Swords, BookOpen, Menu, Filter, Users
 } from "lucide-react";
 import { safeHref, hostOf } from "@/lib/url";
 import NoteCard from "@/components/NoteCard";
 import DetailActions from "@/components/DetailActions";
+import CustomersPanel, { CUSTOMER_STATUS, CUSTOMER_STATUS_ORDER } from "@/components/CustomersPanel";
 import NoteContentEditor from "@/components/ContentEditor";
 import WorkspaceNav from "@/components/WorkspaceNav";
 import IranClock from "@/components/IranClock";
@@ -138,6 +139,7 @@ const SEARCH_PLACEHOLDER = {
   ads: "جستجوی تبلیغ...",
   notes: "جستجوی یادداشت...",
   competitors: "جستجوی رقیب...",
+  customers: "جستجوی نام، شرکت یا اطلاعات مشتری…",
 };
 
 
@@ -1009,9 +1011,12 @@ export default function OpsCenter({
   initialProjects, initialContentItems, initialUpdateItems, initialAdItems,
   initialProjectLinks, initialNotes, initialCompetitorItems, userEmail,
   loadError = null, autoBackupLabel = null,
+  initialCustomers = [],
 }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
+  const projectTabs = [...TABS, { key: "customers", icon: Users, label: "مشتریان", tone: "blue" }];
+  const [customers, setCustomers] = useState(initialCustomers);
 
   const [projects, setProjects] = useState(initialProjects || []);
   const [contentItems, setContentItems] = useState(initialContentItems || []);
@@ -1055,6 +1060,10 @@ export default function OpsCenter({
   const [newProjTag, setNewProjTag] = useState("");
   const [errorMsg, flash] = useFlash(4000);
   const { theme, toggleTheme, mounted } = useTheme();
+
+  useEffect(() => {
+    tabRefs.current[view]?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [view]);
 
   const setView = (next) => {
     setViewState(next);
@@ -1366,10 +1375,29 @@ export default function OpsCenter({
     setAdItems((prev) => prev.filter((a) => a.id !== aid));
   };
 
+  const addCustomer = async (projectId, values) => {
+    const { data, error } = await supabase.from("customers").insert({ ...values, project_id: projectId }).select().single();
+    if (error) { flash("خطا در ثبت مشتری: " + error.message); return false; }
+    setCustomers(old => [data, ...old]); setStatusFilter(null); setSearch(""); return true;
+  };
+  const patchCustomer = async (id, patch) => {
+    const allowed = ["name", "company", "email", "phone", "type", "status", "notes"];
+    const values = Object.fromEntries(Object.entries(patch).filter(([key]) => allowed.includes(key)));
+    const { data, error } = await supabase.from("customers").update(values).eq("id", id).select().single();
+    if (error) { flash("خطا در ذخیره مشتری: " + error.message); return false; }
+    setCustomers(old => old.map(customer => customer.id === id ? data : customer)); return true;
+  };
+  const deleteCustomer = async (id) => {
+    const { data, error } = await supabase.from("customers").delete().eq("id", id).select("id").single();
+    if (error || !data) { flash("حذف مشتری انجام نشد؛ دوباره تلاش کنید."); return false; }
+    setCustomers(old => old.filter(customer => customer.id !== id)); return true;
+  };
+
   // --- project notes mutations ----------------------------------------------
   const addNote = async (pid) => {
     const title = newNoteTitle.trim();
     if (!title) return;
+
     const { data, error } = await supabase
       .from("notes")
       .insert({ project_id: pid, title })
@@ -1386,6 +1414,7 @@ export default function OpsCenter({
     setNotes((p) =>
       p.map((n) => (n.id === id ? { ...n, ...patch, updated_at: new Date().toISOString() } : n))
     );
+
     const { error } = await supabase.from("notes").update(patch).eq("id", id);
     if (error) {
       setNotes(snapshot);
@@ -1396,6 +1425,7 @@ export default function OpsCenter({
   };
 
   const deleteNote = async (id) => {
+
     const snapshot = notes;
     setNotes((p) => p.filter((n) => n.id !== id));
     const { error } = await supabase.from("notes").delete().eq("id", id);
@@ -1580,12 +1610,13 @@ export default function OpsCenter({
     ads: countIn(adItems),
     notes: countIn(notes),
     competitors: countIn(competitorItems),
+    customers: countIn(customers),
   };
 
   // ناوبری تب‌ها با کیبورد (الگوی ARIA). چون صفحه RTL است، فلش چپ «بعدی» است
   // و فلش راست «قبلی» — یعنی جهت حرکت با چیزی که کاربر می‌بیند یکی می‌شود.
   const onTabKeyDown = (e) => {
-    const keys = TABS.map((t) => t.key);
+    const keys = projectTabs.map((t) => t.key);
     const i = keys.indexOf(view);
     let next = null;
     if (e.key === "ArrowLeft") next = keys[(i + 1) % keys.length];
@@ -1613,6 +1644,7 @@ export default function OpsCenter({
     matchesStatus(n) && (!q || [n.title, n.body, n.url, n.tags].some((f) => (f || "").toLowerCase().includes(q)));
   const matchesSearchCompetitor = (c) =>
     matchesStatus(c) && (!q || [c.name, c.url, c.note, c.advantage].some((f) => (f || "").toLowerCase().includes(q)));
+  const matchesSearchCustomer = (customer) => matchesStatus(customer) && (!q || [customer.name, customer.company, customer.phone, customer.email, customer.notes].some(field=>(field || "").toLowerCase().includes(q)));
 
   // نوار آمار بالای صفحه برای هر تب داده‌ی خودش را می‌گیرد
   const activeStats = {
@@ -1622,6 +1654,7 @@ export default function OpsCenter({
     ads: { order: UPDATE_STATUS_ORDER, map: UPDATE_STATUS, counts: adStats },
     notes: { order: NOTE_STATS_ORDER, map: NOTE_STATS, counts: noteStats },
     competitors: { order: COMPETITOR_VERDICT_ORDER, map: COMPETITOR_VERDICT, counts: competitorStats },
+    customers: { order: CUSTOMER_STATUS_ORDER, map: CUSTOMER_STATUS, counts: Object.fromEntries(CUSTOMER_STATUS_ORDER.map(status=>[status,customers.filter(customer=>visibleIds.has(customer.project_id) && customer.status===status).length])) },
   }[view];
 
   const scopedItems = {
@@ -1631,9 +1664,10 @@ export default function OpsCenter({
     ads: adItems.filter(notArchived),
     notes: liveNotes,
     competitors: competitorItems.filter(notArchived),
+    customers,
   }[view];
   const matchItem = { modules: matchesSearch, content: matchesSearchContent, updates: matchesSearchUpdate,
-    ads: matchesSearchAd, notes: matchesSearchNote, competitors: matchesSearchCompetitor }[view];
+    ads: matchesSearchAd, notes: matchesSearchNote, competitors: matchesSearchCompetitor, customers: matchesSearchCustomer }[view];
   const filteredItems = scopedItems.filter(matchItem);
   const matchingProjectIds = new Set(filteredItems.map((item) => item.projectId || item.project_id));
   const displayedProjects = search.trim() || statusFilter
@@ -1958,7 +1992,7 @@ export default function OpsCenter({
             <div className="min-w-0">
               <p className="text-xs mb-1" style={{ color: C.faint }}>فضای کاری / {activeId === "all" ? "نمای کلی" : "پروژه"}</p>
               <h2 className="text-xl font-bold truncate">{activeId === "all" ? "همه پروژه‌ها" : visibleProjects[0]?.name || "پروژه"}</h2>
-              <p className="text-xs mt-2 leading-6" style={{ color: C.muted }}>{faNum(visibleProjects.length)} پروژه · {faNum(allModulesFlat.length)} ماژول · {TABS.find((t) => t.key === view)?.label}</p>
+              <p className="text-xs mt-2 leading-6" style={{ color: C.muted }}>{faNum(visibleProjects.length)} پروژه · {faNum(allModulesFlat.length)} ماژول · {projectTabs.find((t) => t.key === view)?.label}</p>
             </div>
             <button type="button" onClick={() => { setShowAddProject(true); setMobileNavOpen(true); }}
               className="ops-primary shrink-0 rounded-lg px-3 py-2.5 text-xs font-semibold flex items-center gap-1"><Plus size={15} />پروژه جدید</button>
@@ -1995,7 +2029,7 @@ export default function OpsCenter({
               aria-label="نمای پروژه"
               onKeyDown={onTabKeyDown}
             >
-              {TABS.map(({ key, icon: Icon, label, tone: toneKey }) => {
+              {projectTabs.map(({ key, icon: Icon, label, tone: toneKey }) => {
                 const isActive = view === key;
                 const count = TAB_COUNT[key];
                 return (
@@ -2048,7 +2082,7 @@ export default function OpsCenter({
             {/* Stats + search — شروع پنلِ متناظر با تب فعال */}
             <div className="hidden lg:flex px-5 py-2 flex-wrap gap-2 items-center justify-between" style={{ borderBottom: `1px solid ${C.border}` }}>
               <span className="text-xs leading-6" style={{ color: C.muted }}>{activeId === "all" ? "برای افزودن یا ویرایش، ابتدا یک پروژه را از فهرست انتخاب کن." : "برای دیدن روش کار و توضیح کنترل‌ها، راهنمای همین بخش را باز کن."}</span>
-              <GuideHelp section={view === "notes" ? "project-notes" : view === "competitors" ? "links-competitors" : view} />
+              <GuideHelp section={view === "notes" ? "project-notes" : view === "competitors" ? "links-competitors" : view === "customers" ? "find-your-way" : view} />
             </div>
             <div
               role="region"
@@ -2162,6 +2196,7 @@ export default function OpsCenter({
               const projAds = adItems.filter((a) => a.project_id === p.id);
               const projNotes = notes.filter((n) => n.project_id === p.id);
               const projCompetitors = competitorItems.filter((c) => c.project_id === p.id);
+              const projCustomers = customers.filter(customer=>customer.project_id===p.id);
 
               const projDone = projStats.done || 0;
               const projTotal = p.modules.length;
@@ -2184,6 +2219,7 @@ export default function OpsCenter({
                 competitors: COMPETITOR_VERDICT_ORDER.map((s) => [
                   s, COMPETITOR_VERDICT[s], projCompetitors.filter((c) => c.verdict === s).length,
                 ]),
+                customers: CUSTOMER_STATUS_ORDER.map(s=>[s,CUSTOMER_STATUS[s],projCustomers.filter(customer=>customer.status===s).length]),
               }[view].filter(([, , n]) => n > 0);
 
               return (
@@ -2657,6 +2693,12 @@ export default function OpsCenter({
                   </div>
                 )}
 
+                {view === "customers" && <CustomersPanel key={p.id} projectName={p.name}
+                  customers={projCustomers} shownCustomers={projCustomers.filter(matchesSearchCustomer)} canEdit={activeId===p.id}
+                  onSelectProject={()=>selectProject(p.id)}
+                  onAdd={data=>addCustomer(p.id,data)}
+                  onPatch={patchCustomer}
+                  onDelete={deleteCustomer}/>}
                 {view === "competitors" && (
                   <div className="p-4">
                     {showAddCompetitor && activeId === p.id && (

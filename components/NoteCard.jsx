@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import {
-  Pin, PinOff, Copy, Check, ExternalLink, Tag, Link2, ChevronDown,
+  Pin, PinOff, Copy, Check, ExternalLink, Tag, Link2, ChevronDown, NotebookPen,
 } from "lucide-react";
 import ConfirmDelete from "@/components/ConfirmDelete";
 import ContentEditor from "@/components/ContentEditor";
@@ -83,14 +83,17 @@ export default function NoteCard({ note, onPatch, onDelete, slot = null }) {
 
   return (
     <article
-      className="note-card rounded-xl p-4 sm:p-5 ops-card min-w-0"
+      className="note-card rounded-2xl border p-4 sm:p-5 ops-card min-w-0"
       style={{
-        background: C.panel,
-        border: `1px solid ${C.border}`,
-        borderRight: `3px solid ${tone(p.tone)}`,
+        "--note-accent": tone(p.tone),
+        "--note-soft": toneSoft(p.tone),
       }}
     >
       <div className="flex items-start gap-2 mb-3">
+        <span aria-hidden="true" className="note-avatar flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+          style={{ background: note.pinned ? toneSoft("amber") : toneSoft(p.tone), color: note.pinned ? tone("amber") : tone(p.tone) }}>
+          <NotebookPen size={18} strokeWidth={1.6} />
+        </span>
         <textarea
           ref={autoGrow}
           rows={1}
@@ -114,7 +117,7 @@ export default function NoteCard({ note, onPatch, onDelete, slot = null }) {
           title={note.pinned ? "برداشتن سنجاق" : "سنجاق به بالا"}
           aria-pressed={Boolean(note.pinned)}
           className="shrink-0 p-1.5 rounded-lg ops-tap"
-          style={{ color: note.pinned ? tone("amber") : C.faint }}
+          style={{ color: note.pinned ? tone("amber") : C.faint, background: note.pinned ? toneSoft("amber") : undefined }}
         >
           {note.pinned ? <Pin size={13} /> : <PinOff size={13} />}
           <span className="sr-only">{note.pinned ? "برداشتن سنجاق" : "سنجاق"}</span>
@@ -127,7 +130,7 @@ export default function NoteCard({ note, onPatch, onDelete, slot = null }) {
           className="text-xs font-medium rounded-lg py-1.5 px-2 max-w-[110px]" style={{color:tone(p.tone),background:toneSoft(p.tone)}}>
           {PRIORITY_ORDER.map((key) => <option key={key} value={key}>{PRIORITY[key].label}</option>)}
         </select>
-        {note.pinned && <span className="flex items-center gap-1" style={{color:tone("amber")}}><Pin size={11}/>سنجاق‌شده</span>}
+        {note.pinned && <span className="flex items-center gap-1 rounded-lg px-2 py-1" style={{color:tone("amber"),background:toneSoft("amber")}}><Pin size={11}/>سنجاق‌شده</span>}
         {updated && <span className="mr-auto">ویرایش {updated}</span>}
       </div>
 

@@ -11,6 +11,7 @@ import { tone, toneSoft } from "@/lib/theme";
  */
 export default function ConfirmDelete({
   onConfirm,
+  disabled = false,
   size = 13,
   className = "p-1.5",
   title = "حذف",
@@ -25,6 +26,7 @@ export default function ConfirmDelete({
 
   const handleClick = (e) => {
     e.stopPropagation();
+    if (disabled) return;
     if (!armed) {
       setArmed(true);
       timer.current = setTimeout(() => setArmed(false), 3000);
@@ -37,6 +39,7 @@ export default function ConfirmDelete({
 
   return (
     <button
+      disabled={disabled}
       onClick={handleClick}
       onBlur={() => {
         clearTimeout(timer.current);
