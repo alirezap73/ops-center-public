@@ -12,7 +12,7 @@ export default async function DashboardPage() {
 
   const [
     projectsRes, modulesRes, checklistRes, contentRes, updatesRes,
-    adsRes, linksRes, notesRes, competitorsRes, backupRes,
+    adsRes, linksRes, notesRes, competitorsRes, customersRes, backupRes,
   ] = await Promise.all([
     supabase.from("projects").select("*").order("sort_order", { ascending: true }).order("created_at", { ascending: true }),
     supabase.from("modules").select("*").order("created_at", { ascending: true }),
@@ -23,12 +23,13 @@ export default async function DashboardPage() {
     supabase.from("project_links").select("*").order("sort_order", { ascending: true }).order("created_at", { ascending: true }),
     supabase.from("notes").select("*").not("project_id", "is", null).order("pinned", { ascending: false }).order("updated_at", { ascending: false }),
     supabase.from("competitor_items").select("*").order("sort_order", { ascending: true }).order("created_at", { ascending: true }),
+    supabase.from("customers").select("*").order("created_at", { ascending: false }),
     supabase.from("user_backups").select("backed_up_at").eq("user_id", user.id).maybeSingle(),
   ]);
 
   const loadError = [
     projectsRes, modulesRes, checklistRes, contentRes, updatesRes,
-    adsRes, linksRes, notesRes, competitorsRes,
+    adsRes, linksRes, notesRes, competitorsRes, customersRes,
   ].find((result) => result.error)?.error?.message || null;
 
   const modulesByProject = new Map();
@@ -68,6 +69,7 @@ export default async function DashboardPage() {
       initialProjectLinks={linksRes.data || []}
       initialNotes={notesRes.data || []}
       initialCompetitorItems={competitorsRes.data || []}
+      initialCustomers={customersRes.data || []}
       userEmail={user.email}
       loadError={loadError}
       autoBackupLabel={autoBackupLabel}
