@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef, useEffect, useCallback, useId } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { safeHref, hostOf } from "@/lib/url";
 import NoteCard from "@/components/NoteCard";
+import DetailActions from "@/components/DetailActions";
 import NoteContentEditor from "@/components/ContentEditor";
 import WorkspaceNav from "@/components/WorkspaceNav";
 import IranClock from "@/components/IranClock";
@@ -571,12 +572,28 @@ export function CompetitorCard({ item, onPatch, onDelete }) {
   const [editUrl, setEditUrl] = useState(false);
   const [open, setOpen] = useState(false);
 
+  const detailId = useId();
+  const [editRequest, setEditRequest] = useState(0);
+  const [advantageEditRequest, setAdvantageEditRequest] = useState(0);
+  const [noteState, setNoteState] = useState({ dirty: false, saving: false });
+  const [advantageState, setAdvantageState] = useState({ dirty: false, saving: false });
+  const onNoteState = useCallback((state) => setNoteState(state), []);
+  const onAdvantageState = useCallback((state) => setAdvantageState(state), []);
+  const hasDraft = noteState.dirty || advantageState.dirty;
+  const savingAnalysis = noteState.saving || advantageState.saving;
+
   const href = safeHref(item.url);
   const v = COMPETITOR_VERDICT[item.verdict] || COMPETITOR_VERDICT.neutral;
   const save = (field, value, current) => {
     if (value !== current) onPatch(item.id, { [field]: value });
   };
   const hasDetail = Boolean(item.note?.trim() || item.advantage?.trim());
+  const startWriting = () => {
+    setOpen(true);
+    if (!noteState.dirty && (advantageState.dirty || (!item.note?.trim() && item.advantage?.trim()))) {
+      setAdvantageEditRequest((n) => n + 1);
+    } else setEditRequest((n) => n + 1);
+  };
 
   return (
     <div
@@ -590,8 +607,10 @@ export function CompetitorCard({ item, onPatch, onDelete }) {
       <div className="flex items-center gap-2 px-3 py-2.5">
         <button
           onClick={() => setOpen((o) => !o)}
+          disabled={savingAnalysis}
           aria-expanded={open}
-          className="shrink-0 p-0.5 rounded ops-tap"
+          aria-controls={detailId}
+          className="shrink-0 p-2 rounded-lg ops-tap"
           style={{ color: hasDetail ? tone("blue") : C.faint }}
           title={open ? "بستن" : hasDetail ? "باز کردن — نکته و نقطه‌قوت دارد" : "باز کردن"}
         >
@@ -601,6 +620,7 @@ export function CompetitorCard({ item, onPatch, onDelete }) {
 
         <input
           value={name}
+          aria-label="اسم رقیب"
           onChange={(e) => setName(e.target.value)}
           onBlur={() => save("name", name, item.name)}
           placeholder="اسم رقیب"
@@ -698,19 +718,15 @@ export function CompetitorCard({ item, onPatch, onDelete }) {
         </div>
       )}
       <div className="px-3 pb-3">
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          {!open && <p className="text-xs truncate min-w-0 flex-1" style={{ color: C.muted }}>
-            {hasDetail ? (item.note?.trim() || item.advantage?.trim()) : "تحلیل، نکات و نقاط قوت این رقیب را ثبت کنید."}
-          </p>}
-          <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open}
-            className="ops-tap text-xs rounded-md px-2 py-2 flex items-center gap-1" style={{ color: tone("blue") }}>
-            <NotebookPen size={14} />{open ? "بستن جزئیات" : hasDetail ? "مشاهده و ویرایش تحلیل" : "افزودن تحلیل"}
-          </button>
-        </div>
-        <div className={open ? "" : "hidden"}>
+        <DetailActions open={open} saving={savingAnalysis} hasDraft={hasDraft} hasContent={hasDetail}
+          preview={item.note?.trim() || item.advantage?.trim() || "هنوز محتوایی ثبت نشده است."}
+          openLabel="تحلیل رقیب" controls={detailId} onWrite={startWriting} onToggle={() => setOpen((v) => !v)} />
+        <div id={detailId} hidden={!open}>
           <NoteContentEditor value={item.note} label="نکته‌ها و مشکلات" placeholder="مشاهدات، مشکلات و محدودیت‌های این رقیب…"
+            collapsible defaultExpanded editRequest={editRequest} onStateChange={onNoteState}
             onSave={(note) => onPatch(item.id, { note })} />
           <NoteContentEditor value={item.advantage} label="نقاط قوت" placeholder="چه ویژگی‌هایی این رقیب را متمایز می‌کند؟"
+            collapsible defaultExpanded editRequest={advantageEditRequest} onStateChange={onAdvantageState}
             onSave={(advantage) => onPatch(item.id, { advantage })} />
         </div>
       </div>

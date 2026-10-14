@@ -131,7 +131,7 @@ export default function NoteCard({ note, onPatch, onDelete, slot = null }) {
         {updated && <span className="mr-auto">ویرایش {updated}</span>}
       </div>
 
-      <ContentEditor value={note.body} label="متن یادداشت" appearance="paper"
+      <ContentEditor value={note.body} label="متن یادداشت" appearance="paper" collapsible detailActions
         placeholder="جزئیات، ایده‌ها و نکات این یادداشت را بنویس…"
         onSave={(body) => onPatch(note.id, { body })} />
 
